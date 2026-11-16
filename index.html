@@ -391,7 +391,7 @@ uniform float uSpeed, uSpeedVar, uSep, uWSep, uWAli, uWCoh, uEdge, uTurnTau, uSp
 uniform float uMatch, uPosSense, uInit;
 uniform vec3 uRoost; uniform float uRoostR, uWRoost, uWAlt, uMill;
 uniform vec3 uCenter, uCenterVel, uMain, uMainVel, uPlaneN; uniform float uSpread, uRegroup, uR0, uMainR, uMainFrac, uSwirl;
-uniform mat3 uMainInv; uniform vec4 uOther;
+uniform vec3 uAnchor[32]; uniform int uAnchorN; uniform float uAnchorR; uniform vec4 uOther;
 uniform float uWind, uWindScale; uniform vec3 uGust;
 uniform vec4 uClick; uniform float uClickR;
 uniform sampler2D uDens; uniform vec3 uGridO; uniform float uGridCell, uDensRef, uLong;
@@ -599,18 +599,21 @@ void main(){
     }
   }
 
-  // Coming back. The page knows the main body of the flock: where it is, how it lies (uMainInv measures a bird's distance
-  // from it in the body's own widths, along its own axes, so the far end of a long flock counts as inside and a second
-  // body flying alongside does not) and where it is going. A starling outside it flies back: fast from far off, at a
-  // closing speed that falls with the distance left, so it arrives beside the flock instead of shooting through it, and
-  // already flying the flock's way. If a large part has come away, the main body leans toward it and slows to be caught.
+  // Coming back. The page knows the main body of the flock: it marks it out with a few dozen birds spread evenly through
+  // it (uAnchor), so a bird can tell whether it is with the body, whatever shape the body has taken, or away from it. A
+  // starling that is away flies back to the nearest part: fast from far off, at a closing speed that falls with the
+  // distance left, so it arrives beside the flock instead of shooting through it, and already flying the flock's way.
+  // If a large part has come away, the main body leans toward it and slows to be caught.
   float wR = 0.0, vJoin = 0.0;
   if (uSpecies == 0) {
-    vec3 dmn = p - uMain; float mah = sqrt(max(dot(dmn, uMainInv * dmn), 1e-6));
-    wR = smoothstep(2.6, 3.4, mah);
+    float dA = 1e12; vec3 nearA = uMain;
+    for (int i = 0; i < 32; i++) { if (i >= uAnchorN) break; vec3 da = uAnchor[i] - p; float l2 = dot(da, da); if (l2 < dA) { dA = l2; nearA = uAnchor[i]; } }
+    dA = uAnchorN > 0 ? sqrt(dA) : 0.0;
+    float rIn = uAnchorR * 1.5 + 2.0;
+    wR = smoothstep(rIn, rIn + max(4.0, uAnchorR), dA);
     if (wR > 0.0) {
-      float gapM = length(dmn) * (1.0 - 2.2 / mah);
-      vec3 aim = uMain + dmn * (2.2 / mah) + uMainVel * clamp(gapM / max(uSpeed, 1.0), 0.0, 2.5) - p;
+      float gapM = max(dA - rIn * 0.8, 0.0);
+      vec3 aim = nearA + uMainVel * clamp(gapM / max(uSpeed, 1.0), 0.0, 2.5) - p;
       vec3 vWant = uMainVel + aim / (length(aim) + 1e-3) * min(gapM * 0.5, uSpeed * 1.2);
       vJoin = length(vWant);
       vec3 pull = (vWant - v) * 1.6; float pl = length(pull); if (pl > 10.0) pull *= 10.0 / pl;
@@ -1797,7 +1800,7 @@ const PLACES = {
 const BEHAVES = {
   roost:  {name: 'Evening roost', species: 'bird', p: {}},
   veil:   {name: 'Wide veil', species: 'bird', dial: {tight: 0.25, energy: 0.35}, p: {sheet: 1}},
-  ball:   {name: 'Tight ball', species: 'bird', dial: {tight: 0.8, energy: 0.55}, p: {sheet: 0.45}},
+  knot:   {name: 'Tight ball', species: 'bird', dial: {tight: 0.8, energy: 0.55}, p: {sheet: 0.45}},
   restless: {name: 'Restless', species: 'bird', dial: {energy: 0.8}, p: {}},
   gale:   {name: 'Into the wind', species: 'bird', dial: {energy: 0.6}, p: {wind: 0.95, turbulence: 0.85}},
   jumpy:  {name: 'On edge', species: 'bird', p: {panic: 1.35, fear: 1.4, wave: 1.25, ripples: 5, momentum: 0.7, initiate: 1.6, visitors: 2}},
@@ -1814,7 +1817,7 @@ const PRESETS = [
   {id: 'golden-dusk', name: 'Golden Dusk', note: 'Sun low over the reeds', place: 'dusk', behave: 'roost'},
   {id: 'still-lake', name: 'Still Lake', note: 'A wide veil over mirror water', place: 'lake', behave: 'veil'},
   {id: 'sea-sunset', name: 'Sea Sunset', note: 'Leaning into the sea wind', place: 'sea', behave: 'gale'},
-  {id: 'alpine-glow', name: 'Alpine Glow', note: 'A tight ball under the peaks', place: 'alpine', behave: 'ball'},
+  {id: 'alpine-glow', name: 'Alpine Glow', note: 'A tight ball under the peaks', place: 'alpine', behave: 'knot'},
   {id: 'desert-dusk', name: 'Desert Dusk', note: 'Wheeling over the dunes', place: 'desert', behave: 'restless'},
   {id: 'blue-hour', name: 'Blue Hour', note: 'After sunset, first stars', place: 'lake', behave: 'roost', p: {tod: 0.93, clouds: 0.3, mist: 0.6, ink: '#16141b', bloom: 0.5, ripples: 1, exposure: 1.3, sunMoves: false}},
   {id: 'falcon-hour', name: 'Falcon Hour', note: 'Jumpy flock, bold hunter', place: 'dusk', behave: 'jumpy', p: {tod: 0.55}},
@@ -1920,7 +1923,7 @@ function seedFlock(){
   const up = (t, d) => { gl.bindTexture(gl.TEXTURE_2D, t); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, W, H, gl.RGBA, gl.FLOAT, d); };
   S.cur = 0; S.ncur = 0;
   up(S.pos[0], pos); up(S.vel[0], vel); up(S.a1[0], a1); up(S.a2[0], a2); up(S.nA[0], nA); up(S.nB[0], nB);
-  stats.c = c.slice(); stats.spread = a * 0.6; stats.valid = true; stats.main = c.slice(); stats.mainR = a * 0.6; stats.busy = 0; stats.pts = null; stats.mainInv = null; stats.other = null; turn.code = -1; turn.free = turn.next = simTime + 3;
+  stats.c = c.slice(); stats.spread = a * 0.6; stats.valid = true; stats.main = c.slice(); stats.mainR = a * 0.6; stats.busy = 0; stats.pts = null; stats.anchors = null; stats.other = null; turn.code = -1; turn.free = turn.next = simTime + 3;
   op.c = c.slice(); op.R = a * 1.8;
   pickFollow();
   cam.target = c.slice();
@@ -2030,11 +2033,16 @@ function computeStats(){
   mx /= bn; my /= bn; mz /= bn;
   const md2 = mp.map((p) => Math.hypot(p[0] - mx, p[1] - my, p[2] - mz)).sort((a, b) => a - b);
   stats.main = [mx, my, mz]; stats.mainR = md2[Math.floor(md2.length * 0.7)] || stats.spread; stats.mainFrac = bn / m;
-  { // how the main body lies: the inverse of its covariance (padded, so a thin sheet still has some depth), and where the birds outside it are
-    const C = [0, 0, 0, 0, 0, 0]; for (const q of mp) { const x = q[0] - mx, y = q[1] - my, z = q[2] - mz; C[0] += x * x; C[1] += x * y; C[2] += x * z; C[3] += y * y; C[4] += y * z; C[5] += z * z; }
-    const pad = Math.pow(0.3 * stats.mainR, 2), a = C[0] / bn + pad, b = C[1] / bn, c = C[2] / bn, d = C[3] / bn + pad, e = C[4] / bn, f = C[5] / bn + pad;
-    const A = d * f - e * e, B = c * e - b * f, D = b * e - c * d, det = a * A + b * B + c * D;
-    stats.mainInv = det > 1e-6 ? [A / det, B / det, D / det, B / det, (a * f - c * c) / det, (b * c - a * e) / det, D / det, (b * c - a * e) / det, (a * d - b * b) / det] : null;
+  { // mark the main body out for the birds: up to 32 of its sampled birds, each as far as possible from the ones already
+    // chosen, so they are spread evenly through it whatever its shape; and how far the furthest sampled bird is from one
+    const A = [], dmin = new Float32Array(mp.length).fill(1e9); let k = 0, far = 0;
+    for (let i = 1; i < mp.length; i++) if (md2.length && Math.hypot(mp[i][0] - mx, mp[i][1] - my, mp[i][2] - mz) < Math.hypot(mp[k][0] - mx, mp[k][1] - my, mp[k][2] - mz)) k = i;
+    while (A.length < 32 && A.length < mp.length) {
+      A.push(mp[k]); far = 0; let nk = k;
+      for (let i = 0; i < mp.length; i++) { const d = Math.hypot(mp[i][0] - mp[k][0], mp[i][1] - mp[k][1], mp[i][2] - mp[k][2]); if (d < dmin[i]) dmin[i] = d; if (dmin[i] > far) { far = dmin[i]; nk = i; } }
+      k = nk;
+    }
+    stats.anchors = A; stats.anchorR = Math.max(2, far);
     let ox = 0, oy = 0, oz = 0; for (let i = 0; i < m; i++) if (find(i) !== best) { ox += pts[i][0]; oy += pts[i][1]; oz += pts[i][2]; }
     const no = m - bn; stats.other = no ? [ox / no, oy / no, oz / no, no / m] : [mx, my, mz, 0];
   }
@@ -2301,7 +2309,11 @@ function makeHunter(kind, p, user){
 const pred = makeHunter('peregrine', [300, 160, 300], true);
 let wild = [], nextVisit = 20, attackUntil = 0;
 /* hunters take turns: only one attacks at a time, and the flock gets a breather between attacks */
-function mayAttack(h, dur){ if (simTime < attackUntil) { h.next = attackUntil + 1 + rng() * 3; return false; } attackUntil = simTime + dur + (P.species === 'bird' ? 6 : 5); return true; }
+function mayAttack(h, dur){
+  // (a hunter over starlings waits for the flock to close up again before it comes in: an attack parts the flock for a
+  // moment, and a second one while it is still parted would keep it in pieces)
+  if (P.species === 'bird' && stats.mainFrac < 0.85) { h.next = simTime + 1.5 + rng() * 2; return false; }
+  if (simTime < attackUntil) { h.next = attackUntil + 1 + rng() * 3; return false; } attackUntil = simTime + dur + (P.species === 'bird' ? 6 : 5); return true; }
 function startStoop(target, h){
   h = h || pred;
   const K = KINDS[h.kind];
@@ -2588,8 +2600,14 @@ function simPass(dt, E){
   u1f('uEdge', E.edge); u1f('uTurnTau', E.turnTau); u1f('uSpin', E.spin); u1f('uJitter', E.jitter);
   u1f('uMatch', P.speedMatch); u1f('uPosSense', P.posSense); u1f('uInit', P.initiate); u1u('uStep', ++simStep);
   u3f('uCenter', stats.c); u3f('uCenterVel', stats.cv); u3f('uMain', stats.main); u1f('uMainR', stats.mainR); u1f('uMainFrac', stats.mainFrac); u3f('uMainVel', stats.mainV || stats.cv);
-  { const r2 = 1 / Math.pow(Math.max(stats.mainR || stats.spread, 4), 2), I = stats.mainInv || [r2, 0, 0, 0, r2, 0, 0, 0, r2], o = stats.other || [0, 0, 0, 0];
-    if (CUR.u.uMainInv) gl.uniformMatrix3fv(CUR.u.uMainInv, false, new Float32Array(I)); if (CUR.u.uOther) gl.uniform4f(CUR.u.uOther, o[0], o[1], o[2], o[3]); }
+  if (P.species === 'bird') {
+    const A = stats.anchors || [], o = stats.other || [0, 0, 0, 0], flat = new Float32Array(96);
+    // (the sample is a few frames old: carry the marks forward with the flock)
+    const age = Math.max(0, Math.min(0.5, simTime - sampleT)), mv = stats.mainV || stats.cv;
+    for (let i = 0; i < A.length; i++) { flat[i * 3] = A[i][0] + mv[0] * age; flat[i * 3 + 1] = A[i][1] + mv[1] * age; flat[i * 3 + 2] = A[i][2] + mv[2] * age; }
+    if (CUR.u.uAnchor) gl.uniform3fv(CUR.u.uAnchor, flat); u1i('uAnchorN', A.length); u1f('uAnchorR', stats.anchorR || 6);
+    if (CUR.u.uOther) gl.uniform4f(CUR.u.uOther, o[0], o[1], o[2], o[3]);
+  }
  u1f('uSwirl', seedVal % 2 ? 1 : -1); u3f('uPlaneN', stats.plane || [0, 1, 0]); u1f('uSpread', Math.max(stats.spread, sp.spacing * 6)); u1f('uRegroup', sp.wRoost * (P.species === 'bird' ? 1.1 : 1.1) * Math.max(0.6, Math.min(2.4, P.speed * P.speed)));
   u3f('uGust', E.gust);
   gl.uniform1fv(CUR.u.uXp, new Float32Array(P.xp || XP0));

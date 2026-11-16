@@ -52,17 +52,22 @@ it, so it sweeps from side to side in front of you.
 **Tune** (top right) holds everything else.
 
 - **A scene is three choices:** the species (starlings or fish), the place and the behaviour. Starlings
-  have reed beds, a still lake, open sea, mountains and desert; fish have open ocean, a lagoon, a kelp
-  forest and a coral reef. The built-in scenes are pairings of a place and a behaviour; any place can be
-  paired with any behaviour of the same species. Changing
-  the place or the behaviour does not restart anything: the same animals carry on and respond.
-- **Shape** runs from a ball to a thin slab. **Field notes** is a quiet line under the title that names
-  what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.
-- **A seed** draws the individuals, the sky, the flock's size and the hunters' visits. For starlings it
-  also moves the flight itself a little: tightness, restlessness, alignment, roaming, pace, fear and how
-  fast a turn travels are each drawn from a bell curve around the scene's own value and clipped to a set
-  range. *Seed variety* sets how far a seed may go; at zero only the weather changes. Fish keep the
-  scene's values unless you turn it up.
+  have reed beds, a still lake, open sea, mountains and desert, and fly an evening roost, a wide veil, a
+  tight ball, restless, into the wind, or on edge with falcons about. Fish have open ocean, a lagoon, a
+  kelp forest and a coral reef, and travel as a school, mill in a ring or pack into a bait ball. Each
+  built-in scene pairs a place with a different behaviour, so the scenes differ in how the flock flies
+  and not only in what is behind it; any place can be paired with any behaviour of the same species.
+  Changing the place or the behaviour does not restart anything: the same animals carry on and respond.
+- **Shape** runs from a ball to a thin slab. **Field notes**, off until you turn it on, is a quiet line
+  under the title that names what is happening as it happens: a turn sweeping the flock, a falcon
+  arriving, the flock balling up.
+- **A seed** is a different evening. It draws the individuals, where you stand, the hour and the sky, the
+  flock's size and the hunters' visits, and it moves the flight itself: Tightness and Restlessness land
+  anywhere within a quarter of their scale either side of where the behaviour sets them, and alignment,
+  roaming, pace, fear and escape strength are drawn around the scene's values. *Seed variety* sets how
+  far a seed may go; at zero only the weather changes. Fish are moved less.
+- **Let the sun move** is on. Over a few minutes the sun sets and comes back up; under water it swings
+  across the surface, so the shafts lean and sweep and the light warms and cools.
 - **A lever you move stays where you put it** through a reseed, and is marked with a dot. *Reset them*
   hands those levers back to the scene and the seed.
 - **Left alone**, the page moves on by itself after two minutes: a new seed and any pairing of place and
@@ -109,16 +114,22 @@ None of these three has been tried yet. If one fails, please open an issue.
   instead of standing in layers. And the sheet lies in the plane of the birds' wings, so it rolls over
   when the flock turns. The pull comes and goes, so the flock is now a sheet and now gathered into a
   ball. Measured small flocks average about 1 : 2.8 : 5.6 thick, wide and long (Ballerini et al. 2008b).
-- **Turns travel, and the whole flock makes each one.** A turn is started by a bird at the edge, or by
-  the birds out in front when the flock is leaving home, and copied by each neighbour 30 to 100 ms later,
-  so it crosses the flock as a wave at 23 to 30 m/s. Field measurements put that speed at 20 to 40 m/s
-  (Attanasi et al. 2014). Every bird makes the same turn at the same rate, and the rate is slow enough
-  that the wave has crossed the flock before the first birds have turned far: big flocks wheel slowly,
-  small ones dart. One turn runs at a time; of two begun together the bigger carries the flock; a bird the
-  wave misses across a gap follows a moment later, as if it had seen the flock wheel.
+- **Turns travel, and the whole flock makes each one.** One turn runs at a time. It begins at one bird,
+  out at the edge, or out in front when the flock is leaving home, and every other bird begins it at the
+  moment a wave from that point, travelling at 27 m/s, reaches it. Field measurements put that speed at
+  20 to 40 m/s (Attanasi et al. 2014). Every bird turns through the same angle at the same rate, and big
+  flocks wheel more slowly than small ones. Because the moment of turning changes smoothly from one side
+  of the flock to the other, a turn shears the flock: the far side flies on for a moment longer. That is
+  where its changing shapes come from, the stretch into a streamer, the twist, the fold, and it does not
+  tear. Most turns are small; about one in four is a right angle or more. The page keeps the time (it
+  names the turn, where it begins and when) and the birds do the flying.
+- **Coming back.** The page also tells the birds where the main body of the flock is, how it lies and
+  where it is going. A bird, or a body of birds, that has come away flies back: fast from far off, at a
+  closing speed that falls as the gap closes, so it arrives alongside and already flying the flock's way
+  instead of shooting through. The flock leans toward a large lost part and slows for it.
 - **Steering with the mass.** Besides its neighbours, each bird steers with the average motion of the
   birds around it, read from a coarse field of density and velocity. Where two bodies of birds meet they
-  turn to fly together instead of passing through each other. A bird that has fallen out sprints back.
+  turn to fly together instead of passing through each other.
   A travelling school of fish does the same, more gently; milling rings and bait balls keep their own rules.
 - **Alarm travels as a dark band.** A startle begins in one place: where you tap, among the birds nearest
   a falcon, or by itself a few times a minute. Each bird passes it to its neighbours about 70 ms later, so
@@ -129,7 +140,9 @@ None of these three has been tried yet. If one fails, please open an issue.
   is that roll, the whole wing turned to the watcher for a moment (Hemelrijk et al. 2015). A bird a pixel
   or two across cannot show a roll, so far birds are drawn darker for that moment instead.
 - **Hunters.** A peregrine circles above, stoops through the edge of the flock at 46 m/s, pulls out
-  below and climbs back. Hawks give chase. For fish there are sharks and tuna.
+  below and climbs back. Hawks give chase. For fish there are sharks and tuna. Over starlings a wild
+  hunter is an event: the first comes after a minute or so, stays about half a minute, waits for the
+  flock to close up before each pass, and then leaves the flock to itself for a minute or two.
 - **Moving air and water.** The wind, or under water the current, carries every animal with it, stronger
   higher up, with gusts and eddies, so the flock has to work back against it to stay over home. It is a
   flow field, not a fluid solver: there are no thermals or pressure systems, and light is not bent by it.
