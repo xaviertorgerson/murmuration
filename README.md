@@ -19,30 +19,50 @@ typefaces are embedded). It needs WebGL2 with float render targets, which curren
 
 | Tool or input | What it does |
 |---|---|
-| **Hunter** | Your pointer is a falcon (or a shark). The flock dodges it; click to dive. |
-| **Startle** | Click near the flock to send a panic wave from that spot. |
-| **Lure** | The flock is drawn toward your pointer. |
-| **Add hunter** | Click to release a wild hawk, falcon, shark or tuna. |
-| **Inspect** | Right-click, or pick the tool and click, one bird to see its traits and ride along with it. |
-| **Mouse** | Drag to walk around the flock's home, scroll to zoom. |
-| **Touch** | One finger uses the tool, two fingers walk around, pinch to zoom. |
-| **Keys** | `1`–`9`, `0` scenes · `V` view · `R` reseed · `N` new sky · `H` hide panel · `Space` pause · `F` full screen |
+| **Hunter** | Hold and drag: a falcon (or a shark) chases where you point for as long as you hold. Click or tap to make it dive. |
+| **Startle** | Click or tap near the flock to send a panic wave from that spot. |
+| **Lure** | Hold and drag: the flock is drawn toward where you point. |
+| **Add hunter** | Click or tap to release a wild hawk, falcon, shark or tuna. |
+| **Inspect** | Click or tap one bird, or a hunter, to see its traits and ride along with it. A right-click does the same with any tool. |
+| **Mouse** | The left button uses the tool. Drag with the right button, or with Shift held, to look around. The wheel zooms. |
+| **Trackpad** | Click and drag uses the tool. A two-finger swipe looks around; a pinch zooms. |
+| **Touch** | One finger uses the tool. Two fingers look around; a pinch zooms. |
+| **Keys** | `1`–`9`, `0` scenes · arrows look around · `+` `-` zoom · `V` view · `R` reseed · `N` new sky · `H` hide panel · `Space` pause · `F` full screen · `S` screensaver |
 
-**Tune** (top right) has the scenes (seven for starlings, three for fish), flock size, tightness,
-restlessness, time of day and, under *Fine tuning*, every rule's strength. Each seed gives a different
-flock, sky and pattern of hunter visits.
+The same gesture does the same thing with a mouse, a pen or a finger, and nothing follows a pointer that
+is not pressed.
+
+## Scenes, seeds and links
+
+**Tune** (top right) holds everything else.
+
+- **A scene is three choices:** the species (starlings or fish), the place and the behaviour. The built-in
+  scenes are pairings of those; any place can be paired with any behaviour of the same species.
+- **A seed** draws the individuals, the sky, the flock's size and the hunters' visits. For starlings it
+  also moves the flight itself a little: tightness, restlessness, alignment, roaming, pace, fear and how
+  fast a turn travels are each drawn from a bell curve around the scene's own value and clipped to a set
+  range. *Seed variety* sets how far a seed may go; at zero only the weather changes. Fish keep the
+  scene's values unless you turn it up.
+- **A lever you move stays where you put it** through a reseed, and is marked with a dot. *Reset them*
+  hands those levers back to the scene and the seed.
+- **Save** keeps the scene, the seed and your levers in this browser under a name.
+- **Copy link** puts all of it in the address, for example
+  `?scene=still-lake&seed=34&set=tight:0.3`. A link cannot push a lever past its slider.
 
 ## As a screensaver or wallpaper
 
-Add `?screensaver` to the address: <https://xlt.pw/murmuration/?screensaver>. That hides every control,
-ignores the pointer and runs on Eco power (30 frames a second, about 8,000 birds). Wild hunters still
-visit and the scene changes every few minutes.
+*Start screensaver* in the panel (or `S`) hides every control and fills the screen. Move the mouse, click
+or tap for an Exit button; `Esc` also leaves. It holds the scene you were on, or cycles through random
+ones if you choose *Cycle scenes*. *Copy its link* gives an address that opens straight into it.
 
-- `?screensaver&power=balanced` or `&power=high` for more birds and a higher frame rate.
-- `?screensaver#blue-hour` (or any scene's name) to start on that scene.
+- <https://xlt.pw/murmuration/?screensaver> names no scene, so it cycles: a new random scene every few
+  minutes, on Eco power (30 frames a second, about 8,000 birds).
+- `?screensaver&scene=blue-hour&seed=34` holds that scene and that seed. Add `&cycle=1` to start there
+  and then cycle.
+- `&power=balanced` or `&power=high` for more birds and a higher frame rate.
 
-Apps that show a web page as a screensaver or wallpaper can point at that address, or at a downloaded
-copy of `index.html`:
+Apps that show a web page as a screensaver or wallpaper can point at one of those addresses, or at a
+downloaded copy of `index.html`:
 
 - **macOS:** [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver)
 - **Windows:** [Lively Wallpaper](https://github.com/rocksdanister/lively) (wallpaper or screensaver)

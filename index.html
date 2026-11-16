@@ -59,6 +59,18 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--line);border-radiu
 .chip:hover{background:rgba(255,255,255,.1)}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent)}
 .chip small{display:block;font-size:10.5px;color:var(--ink-faint);margin-top:3px;font-weight:400}
+.chip.saved{position:relative;padding-right:24px}.chip.saved .x{position:absolute;right:4px;top:3px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;color:var(--ink-faint)}.chip.saved .x:hover{background:rgba(255,255,255,.14);color:var(--ink)}
+.species{margin-bottom:12px}
+.saverow,.btnrow{display:flex;gap:6px;margin-bottom:10px}
+.saverow input{flex:1;min-width:0;font:500 12px var(--font-body);color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.saverow input::placeholder{color:var(--ink-faint)}
+.saverow button,.btnrow button,.pinnote button{font:500 12px/1 var(--font-body);color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;white-space:nowrap}
+.saverow button:hover,.btnrow button:hover,.pinnote button:hover{background:rgba(255,255,255,.12)}
+.btnrow{margin-top:8px}.btnrow button{flex:1}
+.pinnote{font-size:11.5px;color:var(--ink-dim);margin:0 2px 12px;line-height:1.5}.pinnote button{padding:4px 8px;margin-left:4px}
+.row.pinned .lbl::after,.row.pinned .tog .lbl::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
+.saver-exit{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:9;font:500 13px/1 var(--font-body);color:var(--ink);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:11px 18px;cursor:pointer;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.saver-exit[hidden]{display:none}
 
 details{border-top:1px solid var(--line);padding:2px 0}
 summary{list-style:none;cursor:pointer;font:600 12.5px/1 var(--font-body);letter-spacing:.02em;padding:11px 2px;display:flex;justify-content:space-between;align-items:center;border-radius:6px}
@@ -67,6 +79,7 @@ summary::after{content:"";width:7px;height:7px;border-right:1.5px solid var(--in
 details[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
 .ctrls{display:flex;flex-direction:column;gap:11px;padding:2px 2px 12px}
 .ctrls.quick{gap:13px;padding:2px 0 14px}
+.ctrls.picks{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 0 10px}.picks .row{min-width:0}
 .sub{font:600 10.5px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:6px 2px 9px}
 .row .lab{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .row .lab label{flex:1;margin:0}
@@ -122,6 +135,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 /* ?screensaver: nobody is at the controls, so there are none */
 html.saver .title,html.saver .hint,html.saver .tools,html.saver .tune-btn,html.saver .panel,html.saver .toast,html.saver .card{display:none!important}
 html.saver,html.saver canvas{cursor:none}html.saver canvas{pointer-events:none}
+html.saver.saver-wake,html.saver.saver-wake canvas{cursor:default}
 body.ui-hidden .title,body.ui-hidden .hint{opacity:0;pointer-events:none}
 body.ui-hidden .tune-btn{opacity:.16}
 body.ui-hidden .tune-btn:hover,body.ui-hidden .tune-btn:focus-visible{opacity:1}
@@ -150,20 +164,20 @@ body.ui-hidden .panel{opacity:0;pointer-events:none}
 .card-foot button{font:500 12px/1 var(--font-body);color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
 body.ui-hidden .tools{opacity:0;pointer-events:none}
 .hint{display:none}
-@media (max-width:560px){ .tool-row button{padding:8px 8px;font-size:11.5px} .card{bottom:100px} }
+@media (max-width:560px){ .tool-row button{padding:8px 8px;font-size:11.5px} .card{bottom:100px} body:has(.panel:not(.closed)) .tools{opacity:0;pointer-events:none} }
 @media (prefers-reduced-motion:reduce){
   .panel,.tune-btn,.title,.hint{transition:none}
 }
 </style>
 </head>
 <body>
-<canvas id="gl" tabindex="0" aria-label="Interactive murmuration simulation. Move the pointer to steer the hunter, click to startle the birds, drag to walk around."></canvas>
+<canvas id="gl" tabindex="0" aria-label="Interactive murmuration simulation. Hold and drag to chase the flock with a hunter, click to dive, right-drag or use the arrow keys to look around."></canvas>
 
 <header class="title">
   <h1>Murmuration</h1>
   <p id="subtitle">Golden Dusk · 32,768 starlings</p>
 </header>
-<p class="hint" id="hint">Move to hunt · Click to dive · Drag to look around · Scroll to zoom · <kbd>H</kbd> hides controls</p>
+<p class="hint" id="hint">Hold and drag to use the tool · Right-drag to look around · Scroll to zoom · <kbd>H</kbd> hides controls</p>
 
 <button class="tune-btn" id="tuneBtn" aria-expanded="true" aria-controls="panel">
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4h7M13 4h1M2 12h2M8 12h6"/><circle cx="11" cy="4" r="1.8"/><circle cx="6" cy="12" r="1.8"/></svg>
@@ -171,10 +185,15 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
 </button>
 
 <aside class="panel" id="panel" aria-label="Simulation settings">
-  <h2>Starlings</h2>
-  <div class="chips" id="chipsBird"></div>
-  <h2>Fish</h2>
-  <div class="chips" id="chipsFish"></div>
+  <div class="seg species" id="speciesSeg" role="radiogroup" aria-label="Species"><button type="button" role="radio" data-sp="bird">Starlings</button><button type="button" role="radio" data-sp="fish">Fish</button></div>
+  <h2>Scenes</h2>
+  <div class="chips" id="chips"></div>
+  <div class="ctrls picks">
+    <div class="row"><div class="lab"><label for="placeSel">Place</label></div><select id="placeSel"></select></div>
+    <div class="row"><div class="lab"><label for="behaveSel">Behaviour</label></div><select id="behaveSel"></select></div>
+  </div>
+  <div class="saverow"><input id="saveName" type="text" maxlength="28" placeholder="Name this scene" aria-label="Name for this scene"><button id="saveBtn" type="button">Save</button><button id="linkBtn" type="button">Copy link</button></div>
+  <p class="pinnote" id="pinNote" hidden><span id="pinCount"></span> <button type="button" id="unpinBtn">Reset them</button></p>
   <div class="ctrls quick" id="gQuick"></div>
   <details><summary>Fine tuning</summary>
     <div class="sub">Flock</div><div class="ctrls" id="gFlock"></div>
@@ -185,20 +204,28 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
   <details><summary>How to play</summary>
     <div class="howto">
       <h3>Tools (bar at the bottom)</h3>
-      <dl><dt>Hunter</dt><dd>Your pointer is a falcon (or shark). The flock dodges it; click to dive.</dd>
+      <dl><dt>Hunter</dt><dd>Hold and drag: a falcon (or shark) chases where you point for as long as you hold. Click or tap to make it dive.</dd>
       <dt>Startle</dt><dd>Click near the flock to send a panic wave from that spot.</dd>
-      <dt>Lure</dt><dd>The flock is drawn toward your pointer.</dd>
+      <dt>Lure</dt><dd>Hold and drag: the flock is drawn toward where you point.</dd>
       <dt>Add hunter</dt><dd>Click to release a wild hawk, falcon, shark or tuna there.</dd>
       <dt>Inspect</dt><dd>Click one bird to see its size, pace, boldness and sociability, then ride along with it.</dd></dl>
       <h3>Moving around</h3>
-      <dl><dt>Mouse</dt><dd>Drag sideways to walk around the flock’s home, up or down to rise or sink; scroll to zoom.</dd>
-      <dt>Touch</dt><dd>One finger uses the tool; two fingers walk around and rise; pinch to zoom.</dd></dl>
+      <dl><dt>Mouse</dt><dd>The left button uses the tool. Drag with the right button (or hold Shift) to look around; scroll to zoom.</dd>
+      <dt>Trackpad</dt><dd>Click and drag uses the tool. Swipe with two fingers to look around; pinch to zoom.</dd>
+      <dt>Touch</dt><dd>One finger uses the tool. Two fingers look around; pinch to zoom.</dd></dl>
       <h3>Keys</h3>
-      <p><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd> scenes · <kbd>V</kbd> view · <kbd>R</kbd> reseed · <kbd>N</kbd> new sky · <kbd>H</kbd> hide panel · <kbd>Space</kbd> pause · <kbd>F</kbd> full screen</p>
+      <p><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd> scenes · <kbd>V</kbd> view · <kbd>R</kbd> reseed · <kbd>N</kbd> new sky · <kbd>H</kbd> hide panel · <kbd>Space</kbd> pause · <kbd>F</kbd> full screen · <kbd>S</kbd> screensaver · arrows look around · <kbd>+</kbd> <kbd>−</kbd> zoom</p>
       <h3>What you are seeing</h3>
       <p>Each bird watches only its seven nearest neighbours: it matches their heading and pace, keeps its space, speeds up when it falls behind and eases off out in front. It also sees where the bulk of the flock is, and strays back over home if it wanders past the edge, the way starlings swirl above their roost. Turns and startles pass from bird to bird, which is why waves sweep through the swarm. No two birds are quite alike: some are bigger and quicker, some bolder, some follow their neighbours more closely.</p>
       <p>Murmurations happen at dusk in winter, when starlings gather over a roost; the display is thought to protect them from falcons and hawks, which struggle to single out one bird in a shifting mass. Fish schools do the same under attack from sharks and tuna, sometimes balling up tightly.</p>
       <p>Made by <a href="https://xlt.pw" target="_blank" rel="noopener">Xavier Torgerson</a>. The <a href="https://github.com/xaviertorgerson/murmuration" target="_blank" rel="noopener">source is on GitHub</a> under the MIT licence.</p>
+    </div>
+  </details>
+  <details id="saverBox" open><summary>Screensaver</summary>
+    <div class="howto">
+      <div class="seg" id="saverSeg" role="radiogroup" aria-label="What the screensaver shows"><button type="button" role="radio" data-v="hold">Hold this scene</button><button type="button" role="radio" data-v="cycle">Cycle scenes</button></div>
+      <div class="btnrow"><button id="saverBtn" type="button">Start screensaver</button><button id="saverLinkBtn" type="button">Copy its link</button></div>
+      <p>Hides every control and fills the screen. Press <kbd>Esc</kbd>, or click and choose Exit, to come back. Its link opens straight into it.</p>
     </div>
   </details>
   <details id="perfBox"><summary>Performance</summary>
@@ -227,6 +254,7 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
   <dl id="cardBody"></dl>
   <div class="card-foot" id="cardActs"></div>
 </aside>
+<button class="saver-exit" id="saverExit" type="button" hidden>Exit screensaver</button>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="fade" id="fade" aria-hidden="true"></div>
 <div class="err" id="err" hidden></div>
@@ -1427,18 +1455,43 @@ const BASE = {
          wind: 0.45, turbulence: 0.5, drift: 0.2, wander: 0.6,
          tod: 0.45, sunMoves: false, clouds: 0.5, mist: 0, ink: '#2c4a5e', exposure: 1.05, bloom: 0.9, shafts: 1, haze: 0.6, grain: 0.12, shadow: 1, sheen: 1},
 };
+/* A scene is three independent choices: a species, a place (the backdrop and its light) and a behaviour (how the flock flies).
+   The built-in scenes are named combinations of the three; `p` on a scene is anything it sets beyond its place and behaviour. */
+const PLACES = {
+  dusk:   {name: 'Reed beds', species: 'bird', p: {tod: 0.42}},
+  lake:   {name: 'Still lake', species: 'bird', p: {tod: 0.5, clouds: 0.45, mist: 0.8}},
+  sea:    {name: 'Open sea', species: 'bird', p: {tod: 0.6, clouds: 0.7}},
+  alpine: {name: 'Mountains', species: 'bird', p: {tod: 0.62, clouds: 0.35, mist: 0.7}},
+  desert: {name: 'Desert', species: 'bird', p: {tod: 0.47, clouds: 0.15, mist: 0, haze: 0.8}},
+  ocean:  {name: 'Open ocean', species: 'fish', p: {}},
+  lagoon: {name: 'Lagoon', species: 'fish', p: {}},
+};
+const BEHAVES = {
+  roost:  {name: 'Evening roost', species: 'bird', p: {}},
+  jumpy:  {name: 'On edge', species: 'bird', p: {panic: 1.35, fear: 1.4, wave: 1.4, ripples: 5, momentum: 0.7, initiate: 1.6, visitors: 2}},
+  school: {name: 'Travelling school', species: 'fish', p: {}},
+  mill:   {name: 'Milling ring', species: 'fish', u: 0.06, pitch: 0.38, p: {mill: 1.0, alignment: 1.3, cohesion: 0.8, wander: 0.2, edge: 0.3}},
+  ball:   {name: 'Bait ball', species: 'fish', p: {cohesion: 2.2, alignment: 0.6, space: 0.8, speed: 0.7, mill: 0.35, wander: 0.1, fear: 1.3, panic: 1.3, visitors: 2}},
+};
+function makeScene(d){
+  const pl = PLACES[d.place], bh = BEHAVES[d.behave];
+  return {id: d.id || 'custom', name: d.name || pl.name + ', ' + bh.name.toLowerCase(), note: d.note || '', species: pl.species, scene: d.place, place: d.place, behave: d.behave,
+          u: bh.u, pitch: bh.pitch, own: d.p || {}, p: Object.assign({}, pl.p, bh.p, d.p)};
+}
 const PRESETS = [
-  {id: 'golden-dusk', name: 'Golden Dusk', note: 'Sun low over the reeds', species: 'bird', scene: 'dusk', p: {tod: 0.42}},
-  {id: 'still-lake', name: 'Still Lake', note: 'Mirror water, wooded shore', species: 'bird', scene: 'lake', p: {tod: 0.5, clouds: 0.45, mist: 0.8}},
-  {id: 'sea-sunset', name: 'Sea Sunset', note: 'Pink sky, sun on the water', species: 'bird', scene: 'sea', p: {tod: 0.6, clouds: 0.7}},
-  {id: 'alpine-glow', name: 'Alpine Glow', note: 'Peaks catch the last light', species: 'bird', scene: 'alpine', p: {tod: 0.62, clouds: 0.35, mist: 0.7}},
-  {id: 'desert-dusk', name: 'Desert Dusk', note: 'Dunes under a clear sky', species: 'bird', scene: 'desert', p: {tod: 0.47, clouds: 0.15, mist: 0, haze: 0.8}},
-  {id: 'blue-hour', name: 'Blue Hour', note: 'After sunset, first stars', species: 'bird', scene: 'lake', p: {tod: 0.93, clouds: 0.3, ink: '#16141b', bloom: 0.5, ripples: 1, exposure: 1.3, sunMoves: false}},
-  {id: 'falcon-hour', name: 'Falcon Hour', note: 'Jumpy flock, bold hunter', species: 'bird', scene: 'dusk', p: {tod: 0.55, panic: 1.35, fear: 1.4, wave: 1.4, ripples: 5, momentum: 0.7, initiate: 1.6, visitors: 2}},
-  {id: 'open-ocean', name: 'Open Ocean', note: 'A school on the move', species: 'fish', scene: 'ocean', p: {}},
-  {id: 'milling', name: 'Milling Torus', note: 'Circling in a lagoon', species: 'fish', scene: 'lagoon', u: 0.06, pitch: 0.38, p: {mill: 1.0, alignment: 1.3, cohesion: 0.8, wander: 0.2, edge: 0.3}},
-  {id: 'bait-ball', name: 'Bait Ball', note: 'Packed tight under threat', species: 'fish', scene: 'ocean', p: {cohesion: 2.2, alignment: 0.6, space: 0.8, speed: 0.7, mill: 0.35, wander: 0.1, fear: 1.3, panic: 1.3, visitors: 2}},
-];
+  {id: 'golden-dusk', name: 'Golden Dusk', note: 'Sun low over the reeds', place: 'dusk', behave: 'roost'},
+  {id: 'still-lake', name: 'Still Lake', note: 'Mirror water, wooded shore', place: 'lake', behave: 'roost'},
+  {id: 'sea-sunset', name: 'Sea Sunset', note: 'Pink sky, sun on the water', place: 'sea', behave: 'roost'},
+  {id: 'alpine-glow', name: 'Alpine Glow', note: 'Peaks catch the last light', place: 'alpine', behave: 'roost'},
+  {id: 'desert-dusk', name: 'Desert Dusk', note: 'Dunes under a clear sky', place: 'desert', behave: 'roost'},
+  {id: 'blue-hour', name: 'Blue Hour', note: 'After sunset, first stars', place: 'lake', behave: 'roost', p: {tod: 0.93, clouds: 0.3, mist: 0.6, ink: '#16141b', bloom: 0.5, ripples: 1, exposure: 1.3, sunMoves: false}},
+  {id: 'falcon-hour', name: 'Falcon Hour', note: 'Jumpy flock, bold hunter', place: 'dusk', behave: 'jumpy', p: {tod: 0.55}},
+  {id: 'open-ocean', name: 'Open Ocean', note: 'A school on the move', place: 'ocean', behave: 'school'},
+  {id: 'milling', name: 'Milling Torus', note: 'Circling in a lagoon', place: 'lagoon', behave: 'mill'},
+  {id: 'bait-ball', name: 'Bait Ball', note: 'Packed tight under threat', place: 'ocean', behave: 'ball'},
+].map(makeScene);
+/* a place and a behaviour with nothing else set: the built-in scene if one is exactly that, else an unnamed combination */
+const sceneFor = (place, behave) => PRESETS.find((p) => p.place === place && p.behave === behave && !Object.keys(p.own).length) || makeScene({place, behave});
 /* sun elevation keyframes (degrees) with sRGB colours, converted to linear */
 const SKYKEYS = [
   {el: 14, z: '#3a6fb0', h: '#f2cfa0', s: '#fff1d6', g: '#ffd39a', b: '#9a8fb5'},
@@ -1904,8 +1957,7 @@ function steerHunter(h, target, maxV, acc, dt){
 function updateUserHunter(dt){
   pred.kind = P.species === 'bird' ? 'peregrine' : 'shark';
   const K = KINDS[pred.kind];
-  const idle = !pointer.active || simTime - pointer.last > 2.5;
-  const hunting = P.cursor === 'hunt' && !idle;
+  const hunting = P.cursor === 'hunt' && toolHeld();
   let target, maxV = K.cruise, acc = K.acc;
   pred.threat = 0;
   if (pred.stoop > 0) {
@@ -2121,7 +2173,7 @@ function simPass(dt, E){
   H.forEach((h, i) => { hp.set(h.p, i * 3); hv.set(h.v, i * 3); ht[i] = h.threat; });
   gl.uniform3fv(CUR.u.uHPos, hp); gl.uniform3fv(CUR.u.uHVel, hv); gl.uniform1fv(CUR.u.uHThreat, ht); u1i('uHN', H.length);
   u1f('uFearR', sp.fearR * P.fear); u1f('uFlee', sp.flee); u1f('uIndiv', P.indiv);
-  const lure = P.cursor === 'lure' && !!pointer.down;
+  const lure = P.cursor === 'lure' && toolHeld();
   u3f('uLurePos', pointer.world); u1f('uLure', lure ? 1 : 0);
   u1f('uExcite', P.panic); u1f('uThresh', 0.5); u1f('uRefract', 1.6); u1f('uWave', P.wave);
   u1f('uSpont', P.ripples / 60 * dt / S.N); u1f('uBlind', sp.blind);
@@ -2240,14 +2292,14 @@ function render(){
   drawHunters();
 
   // drifting specks underwater, and a soft light where the lure is
-  const lure = P.cursor === 'lure' && !!pointer.down;
+  const lure = P.cursor === 'lure' && toolHeld();
   const ring = (simTime - click.t) / 0.9;
   if (!sky || lure || (ring >= 0 && ring < 1) || inspect.id >= 0 || inspect.hunter) {
     gl.depthMask(false); gl.blendFunc(gl.ONE, gl.ONE);
     use(PR.mote); uM4('uVP', cam.VP); u3f('uCam', cam.pos); u1f('uTime', simTime); u1f('uPx', pxScale); u1f('uBox', 70);
     gl.bindVertexArray(emptyVAO);
     if (!sky) { u1i('uSingle', 0); u3f('uCol', V3.mul(lightCol, 0.22)); gl.drawArrays(gl.POINTS, 0, coarse ? 1200 : 2600); }
-    if (lure) { u1i('uSingle', 1); u3f('uLure', pointer.world); u3f('uCol', sky ? V3.mul(pal.G, 0.7) : V3.mul(lightCol, 0.9)); gl.drawArrays(gl.POINTS, 0, 1); }
+    if (lure || (P.cursor === 'hunt' && toolHeld())) { u1i('uSingle', 1); u3f('uLure', pointer.world); u3f('uCol', sky ? V3.mul(pal.G, 0.7) : V3.mul(lightCol, 0.9)); gl.drawArrays(gl.POINTS, 0, 1); }
     if (inspect.hunter) { u1i('uSingle', 2); u1f('uRing', 0.05); u3f('uLure', inspect.hunter.p); u3f('uCol', sky ? [1.3, 0.9, 0.7] : V3.mul(lightCol, 1.4)); gl.drawArrays(gl.POINTS, 0, 1); }
     if (inspect.id >= 0 && follow.p) { u1i('uSingle', 2); u1f('uRing', 0.1); u3f('uLure', V3.add(follow.p, V3.mul(follow.v, Math.min(0.25, simTime - follow.t)))); u3f('uCol', sky ? [1.2, 1.1, 0.9] : V3.mul(lightCol, 1.4)); gl.drawArrays(gl.POINTS, 0, 1); }
     if (ring >= 0 && ring < 1) { u1i('uSingle', 2); u1f('uRing', ring); u3f('uLure', click.p); u3f('uCol', sky ? V3.mul(pal.G, 1.1) : V3.mul(lightCol, 1.2)); gl.drawArrays(gl.POINTS, 0, 1); }
@@ -2331,7 +2383,7 @@ const VIEWS = ['orbit', 'ground', 'ride'];
 /* Controls. Quick ones sit at the top with a plain description; the rest live under Fine tuning, each with an info note. */
 const CTRL = [
   {g: 'gQuick', k: 'view', label: 'View', type: 'seg', options: [['orbit', 'Orbit'], ['ground', 'From the ground'], ['ride', 'Ride along']], on: onView,
-   desc: 'Orbit: circle the swarm (drag to circle, scroll to come closer). From the ground: stand near the roost as the flock comes and goes. Ride along: fly behind one bird.'},
+   desc: 'Orbit: circle the swarm (right-drag or two fingers to circle, scroll to come closer). From the ground: stand near the roost as the flock comes and goes. Ride along: fly behind one bird.'},
   {g: 'gQuick', k: 'camDrift', label: 'Camera drifts slowly around', type: 'toggle'},
   {g: 'gQuick', k: 'visitors', label: 'Wild hunters', min: 0, max: 3, step: 1, f: (v) => (+v === 0 ? 'none' : String(v)),
    desc: 'How many wild hunters may be about at once. They arrive now and then, hunt for a while and leave: falcons and hawks for starlings, sharks and tuna for fish.'},
@@ -2343,13 +2395,15 @@ const CTRL = [
    desc: 'How closely they pack, and how hard stray birds pull back into the swarm.'},
   {g: 'gQuick', k: 'energy', label: 'Restlessness', min: 0, max: 1, step: 0.01, ends: ['Calm', 'Restless'], macro: true,
    desc: 'Calm gives long, smooth sweeps. Restless gives flares at the edges, startles and quick turns.'},
+  {g: 'gQuick', k: 'variety', label: 'Seed variety', min: 0, max: 1, step: 0.01, ends: ['Same flight, new weather', 'A different flock'],
+   desc: 'How much a new seed changes the way the flock flies. Each lever is drawn from a bell curve around the scene’s own value and clipped to a safe range. Levers you have moved stay where you put them.'},
   {g: 'gQuick', k: 'speed', label: 'Speed', min: 0.6, max: 1.6, step: 0.01,
    desc: 'Cruising pace. Birds still surge and ease off around it.'},
   {g: 'gQuick', k: 'tod', label: 'Time of day', min: 0, max: 1, step: 0.005, only: 'bird', f: (v) => { const e = sunEl(+v); return 'sun ' + (e >= 0 ? '+' : '−') + Math.abs(e).toFixed(0) + '°'; },
    desc: 'Where the sun sits, from late afternoon to after dark.'},
   {g: 'gQuick', k: 'sunMoves', label: 'Let the sun move', type: 'toggle', only: 'bird'},
   {g: 'gQuick', k: 'tour', label: 'Drift to new scenes when idle', type: 'toggle', global: true,
-   desc: 'After two quiet minutes it fades to a freshly generated scene every few minutes, like a screensaver.'},
+   desc: 'After two quiet minutes it fades to a freshly generated scene every few minutes, like a screensaver. A scene you have adjusted or saved is left alone.'},
   {g: 'gQuick', k: 'power', label: 'Power use', type: 'seg', options: [['eco', 'Eco'], ['balanced', 'Balanced'], ['high', 'High']], global: true, on: setPower,
    desc: 'Eco runs at 30 frames a second with fewer birds, gentle on the GPU. High uses full resolution and the most birds.'},
 
@@ -2407,12 +2461,6 @@ function applyMacros(which){
 const inputs = {};
 function setFill(el){ const v = (el.value - el.min) / (el.max - el.min) * 100; el.style.setProperty('--fill', v + '%'); }
 function buildUI(){
-  for (const pr of PRESETS) {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.id = pr.id; b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = pr.name + '<small>' + pr.note + '</small>';
-    b.addEventListener('click', () => applyPreset(pr.id));
-    $(pr.species === 'bird' ? 'chipsBird' : 'chipsFish').appendChild(b);
-  }
   for (const c of CTRL) {
     const row = document.createElement('div'); row.className = 'row'; row.dataset.k = c.k;
     const id = 'c-' + c.k;
@@ -2420,7 +2468,7 @@ function buildUI(){
     const note = c.desc ? `<p class="desc">${c.desc}</p>` : c.info ? `<p class="info" id="${id}-i" hidden>${c.info}</p>` : '';
     if (c.type === 'toggle') {
       row.innerHTML = `<div class="lab"><label class="tog" for="${id}"><span class="lbl">${c.label}</span><input type="checkbox" id="${id}"></label>${infoBtn}</div>${note}`;
-      const el = row.querySelector('input'); el.addEventListener('change', () => { P[c.k] = el.checked; }); inputs[c.k] = el;
+      const el = row.querySelector('input'); el.addEventListener('change', () => { P[c.k] = el.checked; pin(c.k, el.checked); }); inputs[c.k] = el;
     } else if (c.type === 'seg') {
       row.innerHTML = `<div class="lab"><label id="${id}-l">${c.label}</label>${infoBtn}</div><div class="seg" role="radiogroup" aria-labelledby="${id}-l">` +
         c.options.map(([v, l]) => `<button type="button" role="radio" data-v="${v}" id="${id}-${v}">${l}</button>`).join('') + `</div>${note}`;
@@ -2431,7 +2479,7 @@ function buildUI(){
       const el = row.querySelector('select'); el.addEventListener('change', () => { resetAuto(); setCount(+el.value); }); inputs[c.k] = el;   // a size you pick is tried in full
     } else if (c.type === 'color') {
       row.innerHTML = `<div class="lab"><label for="${id}"><span class="lbl">${c.label}</span></label>${infoBtn}</div><input type="color" id="${id}">${note}`;
-      const el = row.querySelector('input'); el.addEventListener('input', () => { P[c.k] = el.value; }); inputs[c.k] = el;
+      const el = row.querySelector('input'); el.addEventListener('input', () => { P[c.k] = el.value; pin(c.k, el.value); }); inputs[c.k] = el;
     } else {
       const ends = c.ends ? `<div class="ends" aria-hidden="true"><span>${c.ends[0]}</span><span>${c.ends[1]}</span></div>` : '';
       row.innerHTML = `<div class="lab"><label for="${id}"><span class="lbl">${c.label}</span>${c.ends ? '' : `<output id="${id}-o"></output>`}</label>${infoBtn}</div>` +
@@ -2439,7 +2487,9 @@ function buildUI(){
       const el = row.querySelector('input'); const out = row.querySelector('output');
       el.addEventListener('input', () => {
         P[c.k] = +el.value; if (out) out.textContent = (c.f || fmt2)(el.value); setFill(el);
-        if (c.macro) { applyMacros(c.k); syncUI(); }
+        if (c.k === 'variety') { varietyUser[preset.species] = +el.value; urlLive = true; currentSaved = ''; relever(); return; }
+        pin(c.k, +el.value);
+        if (c.macro) { for (const d of MACRO[c.k]) delete pins[d]; applyMacros(c.k); syncUI(); }
       });
       inputs[c.k] = el;
     }
@@ -2462,35 +2512,192 @@ function syncUI(){
     else { el.value = P[c.k]; const out = row.querySelector('output'); if (out) out.textContent = (c.f || fmt2)(P[c.k]); setFill(el); }
   }
   $('airLabel').textContent = fish ? 'Water' : 'Air';
-  document.querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === preset.id)));
+  renderChips();
   document.documentElement.style.setProperty('--accent', SCENES[preset.scene].accent);
   $('subtitle').textContent = preset.name + ' · ' + count.toLocaleString('en-US') + ' ' + SP[P.species].noun;
   $('seedLbl').textContent = 'seed ' + seedVal;
   syncTools();
-  const lead = P.cursor === 'lure' ? (coarse ? 'Drag to lure' : 'Move to lure') : P.cursor === 'off' ? '' : (coarse ? 'Drag to steer the hunter' : 'Move to steer the hunter');
-  $('hint').innerHTML = (lead ? lead + ' · ' : '') + (coarse ? 'Tap to startle · Two fingers to walk around · Pinch to zoom'
-    : 'Click to startle · Drag to walk around and rise · Scroll to zoom · <kbd>V</kbd> view · <kbd>H</kbd> hide');
+  $('hint').innerHTML = coarse ? 'One finger uses the tool · Two fingers look around · Pinch to zoom'
+    : 'Hold and drag to use the tool · Right-drag to look around · Scroll to zoom · <kbd>V</kbd> view · <kbd>H</kbd> hide';
+  syncSaver();
 }
-function applyPreset(id, keepCount){
-  const pr = PRESETS.find((p) => p.id === id) || PRESETS[0];
-  const speciesChanged = !S || P.species !== pr.species;
+/* ---- levers: what the scene sets, what the seed draws, what you pinned ---- */
+let pins = {};                 // levers you moved yourself: they keep your value through a reseed
+let seedP = {};                // what the scene and the seed chose, before your pins
+const varietyUser = {};        // how much a seed may change the way the flock flies, per species; unset is the species' default
+const variety = () => varietyUser[preset.species] != null ? varietyUser[preset.species] : (preset.species === 'bird' ? 0.5 : 0);
+const NOPIN = new Set(['view', 'tour', 'power', 'count', 'variety']);
+const MACRO = {tight: ['cohesion', 'space', 'edge', 'speedMatch'], energy: ['jitter', 'initiate', 'ripples', 'momentum', 'posSense']};
+/* What a seed may move, and how far: [spread at full variety, lowest, highest]. Tightness and Restlessness are dials from 0 to 1
+   that carry their linked levers with them (applyMacros); the others multiply the scene's own value. Draws are bell-shaped
+   and clipped, so no seed lands outside these limits, or outside a slider's own range. */
+const VARY = {tight: [0.16, 0.2, 0.8], energy: [0.16, 0.2, 0.8], alignment: [0.10, 0.8, 1.25], wander: [0.15, 0.7, 1.4], speed: [0.05, 0.9, 1.12], fear: [0.10, 0.8, 1.3], wave: [0.10, 0.8, 1.25]};
+function clampCtrl(k, v, own){ const c = CTRL.find((x) => x.k === k); return c && c.min != null ? Math.max(Math.min(c.min, own), Math.min(Math.max(c.max, own), v)) : v; }
+function applyPins(){
+  let macro = false;
+  for (const k in MACRO) if (k in pins) { P[k] = pins[k]; macro = true; }
+  if (macro) applyMacros();
+  for (const k in pins) if (!(k in MACRO)) P[k] = pins[k];
+}
+function drawVaried(){
+  const B = Object.assign({}, BASE[P.species], preset.p), v = variety();
+  const vr = mulberry32(seedVal ^ 0x5bd1e995 ^ (preset.behave.length * 7919));
+  for (const k in VARY) {
+    const [sd, lo, hi] = VARY[k];
+    const u = Math.max(1e-6, vr()), w = vr(), z = Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2831853 * w);   // always drawn, so a seed means the same at any variety
+    P[k] = k in MACRO ? Math.max(lo, Math.min(hi, 0.5 + z * sd * v)) : clampCtrl(k, B[k] * Math.max(lo, Math.min(hi, Math.exp(z * sd * v))), B[k]);
+  }
+  applyMacros();
+  P.variety = v;
+}
+function drawLevers(){ drawVaried(); seedP = Object.assign({}, P); applyPins(); }
+/* redraw the levers for the same seed without restarting the flock: after the variety dial moves, or pins are cleared */
+function relever(unpinned){
+  for (const k of unpinned || []) if (k in seedP) P[k] = seedP[k];
+  drawVaried();
+  for (const k in VARY) seedP[k] = P[k];
+  for (const g in MACRO) for (const k of MACRO[g]) seedP[k] = P[k];
+  seedP.variety = P.variety;
+  applyPins(); syncUI(); syncURLSoon();
+}
+function pin(k, v){
+  if (NOPIN.has(k)) return;
+  pins[k] = v; urlLive = true; currentSaved = ''; markPins(); syncURLSoon();
+}
+function markPins(){
+  for (const c of CTRL) { const row = $(c.g).querySelector(`[data-k="${c.k}"]`); if (row) row.classList.toggle('pinned', c.k in pins); }
+  const n = Object.keys(pins).length;
+  $('pinNote').hidden = !n; $('pinCount').textContent = n + (n === 1 ? ' lever is' : ' levers are') + ' set by you and will stay through a reseed.';
+  document.querySelectorAll('#chips .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.saved ? b.dataset.saved === currentSaved : !currentSaved && b.dataset.id === preset.id)));
+}
+const lastScene = {};
+function applyScene(sc){
   const cursor = P.cursor, view = P.view, tourOn = P.tour;
-  preset = pr;
-  rng = mulberry32(seedVal ^ (pr.id.length * 2654435761) ^ pr.id.charCodeAt(0) * 40503);
-  P = Object.assign({}, BASE[pr.species], pr.p, {tight: 0.5, energy: 0.5, tour: tourOn != null ? tourOn : true, power});
+  preset = sc; lastScene[sc.species] = sc;
+  rng = mulberry32(seedVal ^ (sc.id.length * 2654435761) ^ sc.id.charCodeAt(0) * 40503);
+  P = Object.assign({}, BASE[sc.species], sc.p, {tight: 0.5, energy: 0.5, tour: tourOn != null ? tourOn : true, power});
   if (cursor) P.cursor = cursor;
   if (view) P.view = view;
   todDir = 1;
   newSky();
-  cam.yaw = cam.syaw = 0.15; cam.pitch = cam.spitch = pr.pitch != null ? pr.pitch : pr.species === 'bird' ? -0.4 : -0.1;
-  cam.u = cam.su = pr.u != null ? pr.u : pr.species === 'bird' ? 0 : 0.17; cam.zoom = cam.szoom = 1; follow.hunter = null;
+  drawLevers();
+  cam.yaw = cam.syaw = 0.15; cam.pitch = cam.spitch = sc.pitch != null ? sc.pitch : sc.species === 'bird' ? -0.4 : -0.1;
+  cam.u = cam.su = sc.u != null ? sc.u : sc.species === 'bird' ? 0 : 0.17; cam.zoom = cam.szoom = 1; follow.hunter = null;
   if (P.varyCount !== false) { const want = drawCount(); if (!S || S.N !== want) { count = want; allocSim(count); } }
   if (!S) allocSim(count);
   effective(0);
   seedFlock();
-  pred.p = V3.add(stats.c, pr.species === 'bird' ? [400, 200, -400] : [0, -5, -120]); pred.v = [0, 0, 1]; pred.stoop = 0; wild = []; attackUntil = 0; nextVisit = simTime + 15 + rng() * 10;
-  try { history.replaceState(null, '', '#' + pr.id); } catch (e) {}
+  pred.p = V3.add(stats.c, sc.species === 'bird' ? [400, 200, -400] : [0, -5, -120]); pred.v = [0, 0, 1]; pred.stoop = 0; wild = []; attackUntil = 0; nextVisit = simTime + 15 + rng() * 10;
+  syncURL();
   syncUI();
+}
+function applyPreset(id){ pins = {}; currentSaved = ''; applyScene(PRESETS.find((p) => p.id === id) || PRESETS[0]); }
+/* you chose a scene: built-in, saved, or a new place or behaviour */
+function pickScene(sc, keepPins){ if (!keepPins) pins = {}; currentSaved = ''; urlLive = true; applyScene(sc); }
+
+/* ---- the scene as a link, and as a saved entry: which scene, which seed, and every lever you moved ---- */
+let urlLive = false;            // the address is left alone until you change something, or arrive with a scene in it
+let currentSaved = '';
+const fmtPin = (v) => typeof v === 'boolean' ? (v ? '1' : '0') : typeof v === 'number' ? String(+v.toFixed(3)) : String(v).replace(/^#/, '');
+function stateQuery(o){
+  const q = PRESETS.includes(preset) ? ['scene=' + preset.id] : ['place=' + preset.place, 'behave=' + preset.behave];
+  q.push('seed=' + seedVal);
+  if (varietyUser[preset.species] != null) q.push('variety=' + +varietyUser[preset.species].toFixed(2));
+  const set = Object.keys(pins).map((k) => k + ':' + fmtPin(pins[k]));
+  if (set.length) q.push('set=' + set.join(','));
+  if (P.view !== 'orbit') q.push('view=' + P.view);
+  if (o && o.saver) { q.unshift('screensaver'); if (power !== 'eco') q.push('power=' + power); if (saverCycle) q.push('cycle=1'); }
+  return q.join('&');
+}
+function parseState(search){
+  const q = new URLSearchParams(search), st = {pins: {}};
+  for (const k of ['scene', 'place', 'behave']) if (q.get(k)) st[k] = q.get(k);
+  const seed = parseInt(q.get('seed'), 10); if (seed > 0 && seed < 1e9) st.seed = seed;
+  const v = parseFloat(q.get('variety')); if (v >= 0 && v <= 1) st.variety = v;
+  if (VIEWS.includes(q.get('view'))) st.view = q.get('view');
+  for (const part of (q.get('set') || '').split(',')) {
+    const i = part.indexOf(':'); if (i < 1) continue;
+    const k = part.slice(0, i), raw = part.slice(i + 1), c = CTRL.find((x) => x.k === k);
+    if (!c || NOPIN.has(k)) continue;
+    if (c.type === 'toggle') st.pins[k] = raw === '1';
+    else if (c.type === 'color') { if (/^[0-9a-f]{6}$/i.test(raw)) st.pins[k] = '#' + raw.toLowerCase(); }
+    else if (!c.type) { const n = parseFloat(raw); if (isFinite(n)) st.pins[k] = Math.max(c.min, Math.min(c.max, n)); }   // a link cannot push a lever past its slider
+  }
+  st.any = !!(st.scene || st.place || st.seed);
+  return st;
+}
+function applyState(st){
+  let sc = st.scene && PRESETS.find((p) => p.id === st.scene);
+  if (!sc && PLACES[st.place] && BEHAVES[st.behave] && PLACES[st.place].species === BEHAVES[st.behave].species) sc = sceneFor(st.place, st.behave);
+  if (st.seed) seedVal = st.seed;
+  sc = sc || PRESETS[0];
+  if (st.variety != null) varietyUser[sc.species] = st.variety; else delete varietyUser[sc.species];
+  pins = Object.assign({}, st.pins);
+  if (st.view) P.view = st.view;
+  currentSaved = '';
+  applyScene(sc);
+}
+function syncURL(){
+  if (!urlLive) return;
+  try { history.replaceState(null, '', location.pathname + '?' + stateQuery({saver: saverOn})); } catch (e) {}
+}
+let urlT = 0;
+function syncURLSoon(){ clearTimeout(urlT); urlT = setTimeout(syncURL, 300); }
+function sceneLink(saver){
+  let base = location.origin + location.pathname;
+  try { if (window.top !== window.self || location.protocol === 'file:') base = (document.querySelector('link[rel=canonical]') || {}).href || base; } catch (e) {}
+  return base + '?' + stateQuery({saver});
+}
+function copyLink(saver){
+  const url = sceneLink(saver), done = () => toast(saver ? 'Screensaver link copied' : 'Link copied');
+  const fallback = () => {
+    const i = $('saveName'); i.value = url; i.focus(); i.select();
+    try { if (document.execCommand('copy')) { i.value = ''; done(); return; } } catch (e) {}
+    toast('Copy the link from the box above the sliders');
+  };
+  try { navigator.clipboard.writeText(url).then(done, fallback); } catch (e) { fallback(); }
+}
+const SAVE_KEY = 'murmur.scenes';
+let saved = [];
+try { const arr = JSON.parse(localStorage.getItem(SAVE_KEY) || '[]'); if (Array.isArray(arr)) saved = arr.filter((x) => x && typeof x.name === 'string' && typeof x.q === 'string' && (x.sp === 'bird' || x.sp === 'fish')); } catch (e) {}
+function storeSaved(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(saved)); return true; } catch (e) { return false; } }
+function saveScene(){
+  const name = ($('saveName').value || '').trim().slice(0, 28) || preset.name + ' ' + seedVal;
+  saved = saved.filter((x) => x.name !== name); saved.push({name, sp: preset.species, q: stateQuery()});
+  const ok = storeSaved(); currentSaved = name; $('saveName').value = ''; chipSig = ''; syncUI();
+  toast(ok ? 'Saved “' + name + '”' : 'Kept for this visit only: this browser will not store it. Copy the link to keep it.');
+}
+function loadSaved(sv){ urlLive = true; applyState(parseState(sv.q)); currentSaved = sv.name; syncURL(); syncUI(); }
+let chipSig = '';
+function renderChips(){
+  const sp = preset.species, mine = saved.filter((x) => x.sp === sp);
+  const sig = sp + '|' + mine.map((x) => x.name).join('|');
+  if (sig !== chipSig) {
+    chipSig = sig;
+    const box = $('chips'); box.textContent = '';
+    for (const pr of PRESETS.filter((x) => x.species === sp)) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.id = pr.id;
+      b.innerHTML = pr.name + '<small>' + pr.note + '</small>';
+      b.addEventListener('click', () => pickScene(pr));
+      box.appendChild(b);
+    }
+    for (const sv of mine) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip saved'; b.dataset.saved = sv.name;
+      const nm = document.createElement('span'); nm.textContent = sv.name; b.appendChild(nm);
+      const sm = document.createElement('small'); sm.textContent = 'Saved by you'; b.appendChild(sm);
+      const x = document.createElement('span'); x.className = 'x'; x.textContent = '×'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Delete ' + sv.name); b.appendChild(x);
+      b.addEventListener('click', (e) => {
+        if (e.target !== x) { loadSaved(sv); return; }
+        saved = saved.filter((y) => y !== sv); storeSaved(); if (currentSaved === sv.name) currentSaved = ''; syncUI(); toast('Deleted “' + sv.name + '”');
+      });
+      box.appendChild(b);
+    }
+    const fill = (sel, table) => { sel.textContent = ''; for (const k in table) if (table[k].species === sp) { const o = document.createElement('option'); o.value = k; o.textContent = table[k].name; sel.appendChild(o); } };
+    fill($('placeSel'), PLACES); fill($('behaveSel'), BEHAVES);
+  }
+  $('placeSel').value = preset.place; $('behaveSel').value = preset.behave;
+  document.querySelectorAll('#speciesSeg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.sp === sp)));
+  markPins();
 }
 function setCount(n){
   count = baseCount = n; allocSim(count); seedFlock(); syncUI();
@@ -2509,24 +2716,82 @@ $('fpsBtn').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key 
 $('pauseBtn').addEventListener('click', () => { paused = !paused; $('pauseBtn').textContent = paused ? 'Resume' : 'Pause'; });
 function reseed(v){
   seedVal = v || 1 + Math.floor(Math.random() * 999999);
-  applyPreset(preset.id, true);
+  urlLive = true;
+  applyScene(preset);      // your pinned levers stay; everything else is redrawn
   toast('Seed ' + seedVal);
 }
 $('resetBtn').addEventListener('click', () => reseed());
-$('skyBtn').addEventListener('click', () => { newSky(true); toast('New sky'); });
+const freshSky = () => { newSky(true); for (const k of ['bloom', 'haze', 'shafts', 'mist', 'wind', 'exposure', 'clouds', 'sunAz']) seedP[k] = P[k]; applyPins(); syncUI(); toast('New sky'); };
+$('skyBtn').addEventListener('click', freshSky);
+
+/* Screensaver: a mode you flip into (Start screensaver, or S), or arrive in with ?screensaver in the link. It holds the scene it
+   was started on unless asked to cycle; a bare ?screensaver link, which names no scene, cycles through random ones. */
+let saverOn = SAVER, saverCycle = false, saverFS = false, wake = null, saverT = 0;
+async function keepAwake(on){
+  try {
+    if (on && navigator.wakeLock && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
+    else if (!on && wake) { const w = wake; wake = null; await w.release(); }
+  } catch (e) {}
+}
+function setSaver(on){
+  saverOn = on;
+  if (on && document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  document.documentElement.classList.toggle('saver', on);
+  $('saverExit').hidden = true; document.documentElement.classList.remove('saver-wake'); clearTimeout(saverT);
+  keepAwake(on);
+  try {
+    if (on && !document.fullscreenElement) document.documentElement.requestFullscreen().then(() => { saverFS = true; }, () => {});
+    else if (!on && document.fullscreenElement && saverFS) document.exitFullscreen().catch(() => {});
+  } catch (e) {}
+  if (!on) saverFS = false; else lastTour = performance.now();
+  urlLive = true; syncURL();
+}
+function showSaverExit(){
+  const b = $('saverExit'), root = document.documentElement;
+  b.hidden = false; root.classList.add('saver-wake'); clearTimeout(saverT);
+  saverT = setTimeout(() => { b.hidden = true; root.classList.remove('saver-wake'); }, 3500);
+}
+function syncSaver(){ document.querySelectorAll('#saverSeg button').forEach((b) => b.setAttribute('aria-checked', String((b.dataset.v === 'cycle') === saverCycle))); }
+document.addEventListener('fullscreenchange', () => { if (saverOn && saverFS && !document.fullscreenElement) setSaver(false); });   // Esc in full screen leaves both
+document.addEventListener('visibilitychange', () => { if (saverOn && !document.hidden) keepAwake(true); });
+document.addEventListener('pointerdown', (e) => { if (saverOn && e.target !== $('saverExit')) showSaverExit(); }, true);
+let saverMove = null;
+document.addEventListener('pointermove', (e) => {      // a real movement of the mouse, not the jitter of one lying on a desk
+  if (!saverOn || e.pointerType !== 'mouse') return;
+  if (!saverMove || e.timeStamp - saverMove.t > 600) { saverMove = {x: e.clientX, y: e.clientY, t: e.timeStamp}; return; }
+  if (Math.hypot(e.clientX - saverMove.x, e.clientY - saverMove.y) > 24) { saverMove = null; showSaverExit(); }
+}, true);
+$('saverExit').addEventListener('click', () => setSaver(false));
+$('saverBtn').addEventListener('click', () => setSaver(true));
+$('saverLinkBtn').addEventListener('click', () => copyLink(true));
+document.querySelectorAll('#saverSeg button').forEach((b) => b.addEventListener('click', () => { saverCycle = b.dataset.v === 'cycle'; syncSaver(); }));
+if (SAVER) keepAwake(true);
+
+/* species, place and behaviour are three separate choices; saving and linking */
+document.querySelectorAll('#speciesSeg button').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.sp !== preset.species) pickScene(lastScene[b.dataset.sp] || PRESETS.find((p) => p.species === b.dataset.sp));
+}));
+$('placeSel').addEventListener('change', (e) => { const pl = e.target.value; for (const k in PLACES[pl].p) delete pins[k]; pickScene(sceneFor(pl, preset.behave), true); });
+$('behaveSel').addEventListener('change', (e) => { const bh = e.target.value; for (const k in BEHAVES[bh].p) delete pins[k]; pickScene(sceneFor(preset.place, bh), true); });
+$('saveBtn').addEventListener('click', saveScene);
+$('saveName').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveScene(); });
+$('linkBtn').addEventListener('click', () => copyLink(false));
+$('unpinBtn').addEventListener('click', () => { const was = Object.keys(pins); pins = {}; currentSaved = ''; relever(was); });
 
 /* screensaver drift: after a couple of idle minutes, fade to a freshly generated scene every few minutes */
 let lastInteract = performance.now(), lastTour = performance.now(), touring = false;
 ['pointerdown', 'keydown', 'wheel', 'input'].forEach((ev) => addEventListener(ev, () => { lastInteract = performance.now(); }, {passive: true, capture: true}));
 function tour(now){
-  if (!P.tour || touring || paused) return;
-  if (now - lastInteract < 120000 || now - lastTour < 200000) return;
+  if (touring || paused) return;
+  if (saverOn) { if (!saverCycle || now - lastTour < 180000) return; }      // a screensaver holds its scene unless it was asked to cycle
+  else if (!P.tour || now - lastInteract < 120000 || now - lastTour < 200000) return;
+  else if (Object.keys(pins).length || currentSaved || !PRESETS.includes(preset)) return;      // a scene you adjusted, saved or built stays put
   touring = true; lastTour = now;
   $('fade').classList.add('on');
   setTimeout(() => {
     const pool = PRESETS.filter((p) => p.id !== preset.id && (p.species === 'bird' || Math.random() < 0.35));
     seedVal = 1 + Math.floor(Math.random() * 999999);
-    applyPreset(pool[Math.floor(Math.random() * pool.length)].id, true);
+    applyPreset(pool[Math.floor(Math.random() * pool.length)].id);
     setTimeout(() => { $('fade').classList.remove('on'); touring = false; }, 900);
   }, 1700);
 }
@@ -2542,15 +2807,19 @@ $('fsBtn').addEventListener('click', () => {
   } catch (e) { toast('Full screen is not available here.'); }
 });
 
-/* pointer: move hunts, click dives, drag orbits, wheel zooms.
-   touch: one finger hunts (tap dives), two fingers turn the view, pinch zooms */
+/* One scheme for mouse, pen and touch.
+   The first finger or the left button is the tool: hold (and drag) to chase with the hunter or to lure, tap or click for the
+   tool's one action. Everything else is the camera: two fingers on a touch screen (drag to look around, pinch to zoom); on a
+   mouse the right button, or the left with Shift; on a trackpad a two-finger swipe to look around and a pinch to zoom; the
+   scroll wheel zooms; the arrow keys look around. Nothing follows a pointer that is not pressed. */
 const touches = new Map();
 let gesture = null;
+const toolHeld = () => !!pointer.down && !pointer.down.look && !pointer.multi;
 function startGesture(){
   const [a, b] = [...touches.values()];
   const [yaw, pitch] = orbitNow();
   gesture = {cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, yaw, pitch, zoom: cam.zoom};
-  pointer.multi = true; pointer.down = null;
+  pointer.multi = true; pointer.down = null; pointer.active = false;
 }
 canvas.addEventListener('pointerdown', (e) => {
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -2560,15 +2829,13 @@ canvas.addEventListener('pointerdown', (e) => {
     if (touches.size >= 2) { startGesture(); return; }
   }
   if (pointer.multi) return;
-  pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; pointer.last = simTime;
-  if (e.button === 2) { pointerRay(); doInspect(); return; }   // right-click inspects, whatever the tool
+  pointer.x = e.clientX; pointer.y = e.clientY;
   const [yaw, pitch] = orbitNow();
-  pointer.down = {x: e.clientX, y: e.clientY, t: performance.now(), moved: false, yaw, pitch};
-  if (pointer.touch) {
-    // press and hold (without moving) to inspect on touch screens
-    clearTimeout(pointer.hold);
-    pointer.hold = setTimeout(() => { const d = pointer.down; if (d && !d.moved && P.cursor !== 'lure') { pointerRay(); doInspect(); pointer.down = null; } }, 550);
-  }
+  const right = e.button === 2 || (e.button === 0 && e.ctrlKey);
+  const look = !pointer.touch && (right || e.button === 1 || e.shiftKey);
+  pointer.down = {x: e.clientX, y: e.clientY, t: performance.now(), moved: false, yaw, pitch, look, right};
+  pointer.active = !look;
+  if (!look) pointerRay();
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointermove', (e) => {
@@ -2583,47 +2850,43 @@ canvas.addEventListener('pointermove', (e) => {
     }
     if (pointer.multi) return;
   }
-  pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; pointer.last = simTime;
   const d = pointer.down;
-  if (d && !pointer.touch) {
-    const dx = e.clientX - d.x, dy = e.clientY - d.y;
-    if (!d.moved && Math.hypot(dx, dy) > 9) { d.moved = true; if (P.cursor !== 'lure') canvas.classList.add('dragging'); }
-    if (P.cursor === 'lure') return;
-    if (d.moved) setOrbit(d.yaw - dx * 0.005, d.pitch + (P.view === 'ground' ? -dy * 0.0025 : dy * 0.004));
-  } else if (d && pointer.touch && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) d.moved = true;
+  if (!d) return;
+  pointer.x = e.clientX; pointer.y = e.clientY;
+  const dx = e.clientX - d.x, dy = e.clientY - d.y;
+  if (!d.moved && Math.hypot(dx, dy) > (pointer.touch ? 10 : 6)) d.moved = true;
+  if (d.look && d.moved) { canvas.classList.add('dragging'); setOrbit(d.yaw - dx * 0.005, d.pitch + (P.view === 'ground' ? -dy * 0.0025 : dy * 0.004)); }
 });
 const endPointer = (e, cancelled) => {
   if (e.pointerType === 'touch') {
     touches.delete(e.pointerId);
     if (touches.size < 2) gesture = null;
-    if (pointer.multi) { if (touches.size === 0) pointer.multi = false; pointer.down = null; return; }
+    if (pointer.multi) { if (touches.size === 0) pointer.multi = false; pointer.down = null; pointer.active = false; return; }
   }
-  const d = pointer.down; pointer.down = null; canvas.classList.remove('dragging');
-  if (!cancelled && d && !d.moved && performance.now() - d.t < 400) {
-    pointerRay();
-    useTool(e);
-  }
-  if (pointer.touch) pointer.last = simTime;
+  const d = pointer.down; pointer.down = null; pointer.active = false; canvas.classList.remove('dragging');
+  if (cancelled || !d) return;
+  const quick = !d.moved && performance.now() - d.t < 400;
+  if (d.look) { if (d.right && quick) { pointerRay(); doInspect(); } return; }   // a right-click that did not drag inspects, whatever the tool
+  if (quick) { pointerRay(); useTool(e); }
 };
 canvas.addEventListener('pointerup', (e) => endPointer(e, false));
 canvas.addEventListener('pointercancel', (e) => endPointer(e, true));
-canvas.addEventListener('pointerleave', (e) => { if (!pointer.down && e.pointerType !== 'touch') pointer.active = false; });
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 /* ---- tools: what a click does ---- */
 const TOOL_HINT = {
-  hunt:    ['Your pointer is a {h}: move to chase, click to dive · right-click to inspect', 'Drag to steer the {h}, tap to dive · hold to inspect'],
+  hunt:    ['Hold and drag to chase with the {h}, click to dive', 'Hold and drag to chase with the {h}, tap to dive'],
   startle: ['Click near the {n} to startle them', 'Tap near the {n} to startle them'],
-  lure:    ['Press and hold: the {n} are drawn toward your pointer', 'Touch and hold: the {n} follow your finger'],
+  lure:    ['Hold and drag: the {n} follow your pointer', 'Hold and drag: the {n} follow your finger'],
   spawn:   ['Click to release a wild {w} there', 'Tap to release a wild {w} there'],
-  inspect: ['Click a {one} or a hunter to see it up close (right-click works with any tool)', 'Tap a {one} or a hunter to see it up close (or press and hold with any tool)'],
+  inspect: ['Click a {one} or a hunter to see it up close', 'Tap a {one} or a hunter to see it up close'],
 };
 function syncTools(){
   document.querySelectorAll('.tool-row button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.tool === P.cursor)));
   const bird = P.species === 'bird';
   const t = (TOOL_HINT[P.cursor] || TOOL_HINT.hunt)[coarse ? 1 : 0]
     .replace('{h}', bird ? 'falcon' : 'shark').replace('{n}', bird ? 'birds' : 'fish').replace('{w}', bird ? 'hawk or falcon' : 'shark or tuna').replace('{one}', bird ? 'bird' : 'fish');
-  $('toolHint').textContent = t + (coarse ? ' · two fingers to walk around, pinch to zoom' : ' · drag to walk around, scroll to zoom');
+  $('toolHint').textContent = t + (coarse ? ' · two fingers to look around, pinch to zoom' : ' · right-drag or two-finger swipe to look around');
 }
 document.querySelectorAll('.tool-row button').forEach((b) => b.addEventListener('click', () => { P.cursor = b.dataset.tool; syncTools(); }));
 function useTool(){
@@ -2746,18 +3009,38 @@ function updateCard(now){
 }
 $('cardClose').addEventListener('click', () => { $('card').hidden = true; inspect.id = -1; inspect.hunter = null; });
 
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); cam.zoom = Math.max(0.3, Math.min(3, cam.zoom * Math.exp(e.deltaY * 0.0012))); }, {passive: false});
+/* A notched mouse wheel zooms. A trackpad sends the same event for a two-finger swipe, which should look around as two fingers do on a
+   touch screen, and marks a pinch with ctrlKey. The two are told apart the usual way: browsers report wheelDelta as exactly -3 x delta
+   for a trackpad's pixel-precise scroll and in steps of 120 for a wheel. The answer is kept for the length of one gesture. */
+const wheelState = {t: -1e9, pad: false};
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const now = performance.now();
+  if (now - wheelState.t > 160) wheelState.pad = e.wheelDeltaY != null ? e.wheelDeltaY === -3 * e.deltaY && e.wheelDeltaX === -3 * e.deltaX : e.deltaMode === 0;
+  wheelState.t = now;
+  if (e.ctrlKey) { cam.zoom = Math.max(0.3, Math.min(3, cam.zoom * Math.exp(e.deltaY * 0.01))); return; }                       // trackpad pinch
+  if (!wheelState.pad && !e.shiftKey) { cam.zoom = Math.max(0.3, Math.min(3, cam.zoom * Math.exp(e.deltaY * 0.0012))); return; }   // mouse wheel
+  const [yaw, pitch] = orbitNow();
+  const dx = e.shiftKey && !wheelState.pad ? e.deltaY || e.deltaX : e.deltaX, dy = e.shiftKey && !wheelState.pad ? 0 : e.deltaY;
+  setOrbit(yaw + dx * 0.0035, pitch + (P.view === 'ground' ? dy * 0.0018 : -dy * 0.003));
+}, {passive: false});
 addEventListener('keydown', (e) => {
+  if (saverOn) { if (e.key === 'Escape') setSaver(false); else showSaverExit(); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;      // leave the browser's own shortcuts alone
   if (e.target.closest && e.target.closest('input,select,textarea')) return;
-  if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('ui-hidden');
+  if (e.key.startsWith('Arrow')) { e.preventDefault(); const [yaw, pitch] = orbitNow(), g = P.view === 'ground' ? -0.5 : 1; setOrbit(yaw + (e.key === 'ArrowLeft' ? -0.09 : e.key === 'ArrowRight' ? 0.09 : 0), pitch + (e.key === 'ArrowUp' ? -0.06 * g : e.key === 'ArrowDown' ? 0.06 * g : 0)); }
+  else if (e.key === '+' || e.key === '=') cam.zoom = Math.max(0.3, cam.zoom * 0.88);
+  else if (e.key === '-' || e.key === '_') cam.zoom = Math.min(3, cam.zoom * 1.14);
+  else if (e.key === 's' || e.key === 'S') setSaver(true);
+  else if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('ui-hidden');
   else if (e.key === ' ') { e.preventDefault(); $('pauseBtn').click(); }
   else if (e.key === 'f' || e.key === 'F') $('fsBtn').click();
   else if (e.key === 'r' || e.key === 'R') reseed();
-  else if (e.key === 'n' || e.key === 'N') { newSky(true); toast('New sky'); }
+  else if (e.key === 'n' || e.key === 'N') freshSky();
   else if (e.key === 'v' || e.key === 'V') { P.view = VIEWS[(VIEWS.indexOf(P.view) + 1) % 3]; onView(P.view); syncUI(); toast(P.view === 'ride' ? 'Riding along with one ' + (P.species === 'bird' ? 'bird' : 'fish') : P.view === 'ground' ? 'From the ground' : 'Orbit'); }
-  else if (/^[0-9]$/.test(e.key)) applyPreset(PRESETS[(+e.key + 9) % 10].id);
+  else if (/^[0-9]$/.test(e.key)) pickScene(PRESETS[(+e.key + 9) % 10]);
 });
-addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== preset.id && PRESETS.some((p) => p.id === id)) applyPreset(id); });
+addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== preset.id && PRESETS.some((p) => p.id === id)) pickScene(PRESETS.find((p) => p.id === id)); });
 addEventListener('resize', resize);
 
 /* =====================================================================
@@ -2766,7 +3049,9 @@ addEventListener('resize', resize);
 buildUI();
 resize();
 $('panel').classList.add('closed'); $('tuneBtn').setAttribute('aria-expanded', 'false');
-applyPreset((location.hash || '').slice(1) || PRESETS[0].id);
+const boot = parseState(location.search);
+saverCycle = SAVER && (QUERY.get('cycle') === '1' || !boot.any);      // a bare ?screensaver cycles; one that names a scene holds it
+if (boot.any) { urlLive = true; applyState(boot); } else applyPreset((location.hash || '').slice(1) || PRESETS[0].id);
 setTimeout(() => $('hint').classList.add('faded'), 12000);
 
 let todShown = 0;
@@ -2891,7 +3176,9 @@ function dump(){
   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
   return out;
 }
-window.__murmur = {get spacing(){ return SP[P.species].spacing * spaceK(); }, get R0(){ const sp = SP[P.species]; return Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5)); }, get stats(){ return stats; }, get P(){ return P; }, applyPreset, setCount, advance, dump, onView, applyMacros, frameStep, hunters, reseed, releaseHunter(kind, k){ for (let i = 0; i < (k || 1); i++) { const h = makeHunter(kind, V3.add(stats.main, [60 + i * 8, P.species === 'bird' ? 40 : 2, 30]), false); h.state = 'hunt'; h.vis = 1; if (P.species === 'fish') h.p = V3.add(stats.main, [14 + i * 3, 1, 8]); else if (kind === 'peregrine') { const R = Math.max(stats.mainR || stats.spread, 6); h.p = V3.add(stats.main, [R * 1.7, R * 0.9 + 30, 0]); h.ang = 0; } wild.push(h); } }, startleFlock(){ click.p = V3.add(stats.main, [stats.mainR * 0.3, 0, 0]); click.t = simTime; if (P.cursor === 'hunt') startStoop(click.p); }, startleAt(x, y){ pointer.x = x; pointer.y = y; pointerRay(); click.p = pointer.world.slice(); click.t = simTime; if (P.cursor === 'hunt') startStoop(pointer.world); }, get pred(){ return pred; }, get fps(){ return fps; }, get cam(){ return cam; }, get follow(){ return follow; }, get auto(){ return AUTO; }, get gpu(){ return gpuName; }, trimFlock, perfText};
+window.__murmur = {get spacing(){ return SP[P.species].spacing * spaceK(); }, get R0(){ const sp = SP[P.species]; return Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5)); }, get stats(){ return stats; }, get P(){ return P; }, applyPreset, setCount, advance, dump, onView, applyMacros, frameStep, hunters, reseed, releaseHunter(kind, k){ for (let i = 0; i < (k || 1); i++) { const h = makeHunter(kind, V3.add(stats.main, [60 + i * 8, P.species === 'bird' ? 40 : 2, 30]), false); h.state = 'hunt'; h.vis = 1; if (P.species === 'fish') h.p = V3.add(stats.main, [14 + i * 3, 1, 8]); else if (kind === 'peregrine') { const R = Math.max(stats.mainR || stats.spread, 6); h.p = V3.add(stats.main, [R * 1.7, R * 0.9 + 30, 0]); h.ang = 0; } wild.push(h); } }, startleFlock(){ click.p = V3.add(stats.main, [stats.mainR * 0.3, 0, 0]); click.t = simTime; if (P.cursor === 'hunt') startStoop(click.p); }, startleAt(x, y){ pointer.x = x; pointer.y = y; pointerRay(); click.p = pointer.world.slice(); click.t = simTime; if (P.cursor === 'hunt') startStoop(pointer.world); }, get pred(){ return pred; }, get fps(){ return fps; }, get cam(){ return cam; }, get follow(){ return follow; }, get auto(){ return AUTO; }, get gpu(){ return gpuName; }, trimFlock, perfText,
+  get scene(){ return preset; }, get pins(){ return pins; }, get saver(){ return {on: saverOn, cycle: saverCycle}; }, get seed(){ return seedVal; }, get held(){ return toolHeld(); },
+  stateQuery, parseState, applyState, pickScene, sceneFor, setSaver, relever, setVariety(v){ varietyUser[preset.species] = v; relever(); }};
 })();
 </script>
 </body>
