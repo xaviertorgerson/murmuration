@@ -291,6 +291,17 @@ float rnd(uint x){ return float(hashu(x) >> 8) * (1.0/16777216.0); }
 float gauss3(uint s){ return (rnd(s) + rnd(s + 1u) + rnd(s + 2u) - 1.5) * 2.0; }
 uint cellHash(ivec3 c){ uvec3 u = uvec3(c + ivec3(1048576)); return (u.x*73856093u) ^ (u.y*19349663u) ^ (u.z*83492791u); }
 `;
+const OBST = `
+/* Things standing on the sea floor, placed by hashing a grid: the same function tells the backdrop where to draw them
+   and the fish where not to swim. kind 1: kelp, tall stalks. kind 2: reef, rounded coral heads. */
+const float OG = 13.0;                                   // grid cell, metres; each thing stays inside its own cell
+vec4 obstAt(vec2 cell, int kind){                        // centre x, centre z, radius, height (radius 0: nothing here)
+  vec2 h = fract(sin(vec2(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)))) * 43758.5453);
+  float h3 = fract(sin(dot(cell, vec2(419.2, 371.9))) * 43758.5453);
+  if (kind == 1) return h3 > 0.78 ? vec4(0.0) : vec4((cell + 0.12 + 0.76 * h) * OG, 0.3 + 0.25 * h3, 20.0 + 26.0 * h.x);
+  return h3 > 0.62 ? vec4(0.0) : vec4((cell + 0.34 + 0.32 * h) * OG, 1.6 + 4.2 * h3, 0.0);
+}
+`;
 const FULL_VS = HDR + `
 out vec2 vUv;
 void main(){
@@ -369,7 +380,7 @@ void main(){
    vel  = xyz, w = wingbeat / tailbeat phase
    aux1 = xyz turning momentum, w = packed turn intent (timer + heading angle)
    aux2 = x refractory (>0) or -charge, y alarm, z mean neighbour distance, w flight effort (0 glide .. 1 flap hard) */
-const SIM_FS = HDR + HASH + `
+const SIM_FS = HDR + HASH + OBST + `
 uniform sampler2D uPos, uVel, uAux1, uAux2, uNbrA, uNbrB;
 uniform int uW, uN, uK, uSpecies;
 uniform float uDt, uTime; uniform uint uStep;
@@ -385,6 +396,7 @@ uniform float uXp[10];
 uniform vec3 uLurePos; uniform float uLure;
 uniform float uExcite, uThresh, uRefract, uWave, uSpont, uBlind;
 uniform float uSheet, uFlow, uQuiet, uTurnRate;
+uniform vec3 uFlowV; uniform int uObst;
 uniform vec4 uWaveO; uniform float uWaveCode;
 uniform vec2 uBounds;
 layout(location=0) out vec4 oPos; layout(location=1) out vec4 oVel; layout(location=2) out vec4 oAux1; layout(location=3) out vec4 oAux2;
@@ -590,6 +602,24 @@ void main(){
     acc += dl3 / L * uLure * uSpeed * (0.25 + 0.9 * exp(-L / (uFearR * 2.0)));
   }
   direct.y += max(0.0, uBounds.x - p.y) * 3.0 - max(0.0, p.y - uBounds.y) * 3.0;
+  if (uSpecies == 1 && uObst > 0) {
+    // kelp stalks and coral heads: veer early if one is dead ahead, and never swim through it
+    float floorY = uBounds.x - 4.0; vec2 cb = floor(p.xz / OG - 0.5), f2 = normalize(fwd.xz + vec2(1e-4, 0.0)), side = vec2(-f2.y, f2.x);
+    for (int i = 0; i < 4; i++) {
+      vec4 ob = obstAt(cb + vec2(float(i & 1), float(i >> 1)), uObst);
+      if (ob.z <= 0.0) continue;
+      if (uObst == 1) {
+        if (p.y > min(floorY + ob.w, -1.5) + 1.0) continue;
+        vec2 dv = p.xz - ob.xy; float dd = length(dv) + 1e-3, R = ob.z * 2.0 + 0.9;
+        if (dd < R) direct.xz += dv / dd * (1.0 - dd / R) * 22.0;
+        else if (dd < R + 3.5) { float ahead = dot(f2, -dv / dd); if (ahead > 0.6) acc.xz += side * (dot(side, dv) > 0.0 ? 1.0 : -1.0) * 7.0 * ahead * (1.0 - (dd - R) / 3.5); }
+      } else {
+        vec3 dv = p - vec3(ob.x, floorY - 0.25 * ob.z, ob.y); float dd = length(dv) + 1e-3, R = ob.z + 1.1;
+        if (dd < R) direct += dv / dd * (1.0 - dd / R) * 22.0;
+        else if (dd < R + 3.5) { float ahead = dot(fwd, -dv / dd); if (ahead > 0.6) acc += (vec3(0.0, 1.0, 0.0) * 0.8 + vec3(side.x, 0.0, side.y) * (dot(side, dv.xz) > 0.0 ? 1.0 : -1.0)) * 6.0 * ahead * (1.0 - (dd - R) / 3.5); }
+      }
+    }
+  }
 
   // Turns. Starlings: a few birds (usually at the edge) decide to turn; each neighbour copies the turn a reaction-time later,
   // so the turn sweeps across the whole flock at 20-40 m/s without fading, as measured in real flocks.
@@ -721,6 +751,8 @@ void main(){
   float s2 = length(v);
   v = v / max(s2, 1e-4) * clamp(s2, uSpeed * 0.55, uSpeed * (1.6 + fear * 0.8));
   p += v * uDt;
+  // the air or water itself is moving and carries the animal with it: wind is stronger higher up, and eddies ride on it
+  p += (uFlowV * (uSpecies == 0 ? 0.6 + 0.4 * clamp(p.y / 90.0, 0.0, 1.4) : 1.0) + wv * 0.1 * length(uFlowV)) * uDt;
 
   // effort: flap when short of speed, climbing, turning hard or startled; glide when diving or ahead of pace
   vec3 f2 = normalize(v);
@@ -817,9 +849,9 @@ float crowns(float x){ float i = floor(x), f = fract(x); float q = (f - 0.5) / (
 `;
 
 /* ---- backdrops: dusk over reeds, dusk over sea, and underwater ---- */
-const BG_FS = HDR + NOISE + SKY + `
+const BG_FS = HDR + NOISE + SKY + OBST + `
 in vec2 vUv; out vec4 o;
-uniform mat4 uInvVP; uniform vec3 uCam; uniform int uScene, uRange, uWater; uniform vec2 uSeed;
+uniform mat4 uInvVP, uVP; uniform vec3 uCam; uniform int uScene, uRange, uWater, uObst; uniform vec2 uSeed;
 uniform float uTime, uCloud, uStars, uShaftAmt, uFloor, uFog, uMist, uCloudT, uMoon, uSway;
 uniform vec3 uMoonDir;
 uniform vec3 uWTop, uWDeep, uSand, uLightDir, uLightCol;
@@ -1013,9 +1045,10 @@ float caustic(vec2 p, float t){
   float a = vnoise(q * 1.6 + t * 0.4), b = vnoise(q * 2.1 - t * 0.35 + 9.0);
   return pow(1.0 - abs(a - b), 10.0);
 }
-vec3 underwater(vec3 d){
+vec3 underwater(vec3 d, out float hitT){
   vec3 c = waterGrad(d, uWTop, uWDeep);
-  vec3 ro = uCam;
+  vec3 ro = uCam; hitT = -1.0;
+  float tFloor = d.y < 0.0 ? (uFloor - ro.y) / d.y : 1e9;
   if (d.y > 0.0) {
     float t = -ro.y / d.y;
     vec2 sp = ro.xz + d.xz * t;
@@ -1034,7 +1067,69 @@ vec3 underwater(vec3 d){
     vec3 fl = uSand * sand * (0.35 + 1.2 * caustic(fp * 0.35, uTime));
     fl *= mix(0.4, 1.0, smoothstep(0.35, 0.6, fbm(fp * 0.04 + 7.0)));
     fl *= exp(uFloor * 0.018);
+    if (uObst == 2) fl *= mix(vec3(1.0), vec3(0.55, 0.8, 0.62), smoothstep(0.5, 0.7, fbm(fp * 0.11 + 3.0)));      // patches of weed between the coral heads
     c = mix(c, fl, exp(-t * uFog));
+  }
+  if (uObst > 0) {
+    // walk the grid along the ray; the first thing hit is the nearest
+    vec2 ro2 = ro.xz, rd2 = d.xz + vec2(1e-5);
+    vec2 cell = floor(ro2 / OG), stp = sign(rd2), tDel = OG / abs(rd2);
+    vec2 tMax = ((cell + max(stp, 0.0)) * OG - ro2) / rd2;
+    float tEnd = min(tFloor, 4.2 / uFog);
+    for (int i = 0; i < 26; i++) {
+      vec4 ob = obstAt(cell, uObst);
+      if (ob.z > 0.0) {
+        float hue = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+        if (uObst == 1) {
+          // kelp: a stalk that sways more the higher it goes, wrapped in ragged fronds
+          float top = min(uFloor + ob.w, -1.5), r = ob.z * 2.0;
+          vec2 oc = ro2 - ob.xy; float a = dot(rd2, rd2), b = dot(oc, rd2), cc = dot(oc, oc) - r * r, disc = b * b - a * cc;
+          if (disc > 0.0) {
+            float t = (-b - sqrt(disc)) / a;
+            if (t > 2.5 && t < tEnd) {
+              float y = ro.y + d.y * t, up = clamp((y - uFloor) / max(top - uFloor, 1.0), 0.0, 1.0);
+              vec2 sw = vec2(sin(uTime * 0.55 + ob.x), cos(uTime * 0.47 + ob.y)) * 1.1 * up * up;
+              oc = ro2 - ob.xy - sw; b = dot(oc, rd2); cc = dot(oc, oc) - r * r; disc = b * b - a * cc;
+              if (disc > 0.0) {
+                t = (-b - sqrt(disc)) / a; y = ro.y + d.y * t;
+                if (t > 2.5 && t < tEnd && y > uFloor && y < top) {
+                  vec2 hp = ro2 + rd2 * t - ob.xy - sw; float ang = atan(hp.y, hp.x), edge = 1.0 - abs(dot(normalize(hp), normalize(rd2)));
+                  float frond = fbm(vec2(ang * 2.2 + hue * 9.0, y * 0.55 + hue * 31.0));
+                  float alpha = max(smoothstep(0.8, 0.92, 1.0 - edge * 0.999) , smoothstep(0.48, 0.6, frond) * smoothstep(0.0, 0.25, 1.0 - edge)) * smoothstep(top, top - 3.0, y);
+                  if (alpha > 0.02) {
+                    vec3 kc = mix(vec3(0.035, 0.06, 0.02), vec3(0.13, 0.13, 0.035), frond) * (0.35 + 0.9 * exp(y * 0.07)) * (0.6 + 0.5 * uLightCol);
+                    kc += uLightCol * vec3(0.26, 0.3, 0.05) * pow(max(dot(d, uLightDir), 0.0), 4.0) * 0.35 * frond;      // light through the fronds
+                    c = mix(c, mix(waterGrad(d, uWTop, uWDeep), kc, exp(-t * uFog)), alpha);
+                    if (alpha > 0.5) hitT = t;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          // reef: a rounded coral head, half sunk in the sand
+          vec3 cen = vec3(ob.x, uFloor - 0.25 * ob.z, ob.y); vec3 oc = ro - cen;
+          float b = dot(oc, d), cc = dot(oc, oc) - ob.z * ob.z, disc = b * b - cc;
+          if (disc > 0.0) {
+            float t = -b - sqrt(disc);
+            if (t > 0.0 && t < tEnd) {
+              vec3 hp = ro + d * t, n = normalize(hp - cen);
+              float bump = fbm(n.xz * 5.0 + hue * 20.0) * 0.6 + fbm(hp.xz * 1.7) * 0.4;
+              vec3 pal = hue < 0.25 ? vec3(0.9, 0.42, 0.36) : hue < 0.5 ? vec3(0.86, 0.62, 0.24) : hue < 0.75 ? vec3(0.56, 0.36, 0.72) : vec3(0.3, 0.66, 0.6);
+              float pore = fbm(hp.xz * 6.0 + n.xz * 9.0);
+              vec3 rc = mix(uSand * 0.4, pal * (0.55 + 0.6 * pore), smoothstep(0.25, 0.55, bump)) * (0.22 + 0.7 * max(n.y, 0.0) * (0.5 + 1.1 * caustic(hp.xz * 0.35, uTime)) + 0.2 * bump) * (0.6 + 0.4 * smoothstep(-0.3, 0.5, n.y));
+              rc *= exp(uFloor * 0.018) * (0.75 + 0.5 * uLightCol);
+              c = mix(waterGrad(d, uWTop, uWDeep), rc, exp(-t * uFog));
+              hitT = t;
+              break;
+            }
+          }
+        }
+      }
+      if (min(tMax.x, tMax.y) > tEnd) break;
+      if (tMax.x < tMax.y) { cell.x += stp.x; tMax.x += tDel.x; } else { cell.y += stp.y; tMax.y += tDel.y; }
+    }
   }
   vec3 L = uLightDir;
   vec3 qd = d - L * dot(d, L);
@@ -1047,12 +1142,15 @@ void main(){
   vec2 ndc = vUv * 2.0 - 1.0;
   vec4 a = uInvVP * vec4(ndc, -1.0, 1.0), b = uInvVP * vec4(ndc, 1.0, 1.0);
   vec3 d = normalize(b.xyz / b.w - a.xyz / a.w);
-  vec3 c;
+  vec3 c; gl_FragDepth = 1.0;
   if (uScene == 0) {
     float aa = fwidth(d.y) * 1.2 + 1e-5;
     c = skyline(d, skyFull(d, true), uCam.y, uWater == 0, aa);
     if (uWater > 0 && d.y < aa) c = mix(c, waterSurface(d, aa), smoothstep(aa, -aa, d.y));
-  } else c = underwater(d);
+  } else {
+    float hitT; c = underwater(d, hitT);
+    if (hitT > 0.0) { vec4 cp = uVP * vec4(uCam + d * hitT, 1.0); gl_FragDepth = clamp(cp.z / cp.w * 0.5 + 0.5, 0.0, 1.0); }      // so fish behind a stalk or a coral head are hidden by it
+  }
   o = vec4(c, 1.0);
 }`;
 
@@ -1313,7 +1411,7 @@ void main(){
 }`;
 
 const MOTE_VS = HDR + HASH + `
-uniform mat4 uVP; uniform vec3 uCam; uniform float uTime, uPx, uBox, uRing; uniform int uSingle; uniform vec3 uLure;
+uniform mat4 uVP; uniform vec3 uCam, uDrift; uniform float uTime, uPx, uBox, uRing; uniform int uSingle; uniform vec3 uLure;
 out float vA;
 void main(){
   vec3 p; float dist;
@@ -1333,7 +1431,7 @@ void main(){
   }
   uint i = uint(gl_VertexID);
   vec3 r = vec3(rnd(i * 3u + 1u), rnd(i * 3u + 2u), rnd(i * 3u + 3u));
-  vec3 drift = vec3(0.13, -0.08, 0.07) * uTime + vec3(sin(uTime * 0.3 + r.x * 6.0), 0.0, cos(uTime * 0.25 + r.z * 6.0)) * 0.4;
+  vec3 drift = uDrift + vec3(0.0, -0.08, 0.0) * uTime + vec3(sin(uTime * 0.3 + r.x * 6.0), 0.0, cos(uTime * 0.25 + r.z * 6.0)) * 0.4;
   p = uCam + (fract(r + (drift - uCam) / uBox) - 0.5) * uBox;
   dist = length(p - uCam);
   gl_Position = uVP * vec4(p, 1.0);
@@ -1607,6 +1705,8 @@ const SCENES = {
   desert: {kind: 'sky', range: 2, water: 0, eye: 1.8, thresh: 1.0, accent: '#ffc07a'},
   ocean:  {kind: 'water', top: '#2a87a6', deep: '#020f1e', sand: '#6d6858', floor: -70, fog: 0.014, light: '#fff3d8', thresh: 0.6, accent: '#7fd8e6'},
   lagoon: {kind: 'water', top: '#45c0bc', deep: '#06333f', sand: '#d6c69a', floor: -34, fog: 0.02, light: '#fffbe6', thresh: 0.65, accent: '#8ff0d8'},
+  kelp:   {kind: 'water', top: '#3c9c78', deep: '#04241c', sand: '#857f62', floor: -30, fog: 0.024, light: '#f4ffd6', thresh: 0.62, accent: '#b4e89a', obst: 1},
+  reef:   {kind: 'water', top: '#3fb6c6', deep: '#062a42', sand: '#e2d4ae', floor: -17, fog: 0.017, light: '#fffbe8', thresh: 0.66, accent: '#ffb89e', obst: 2},
 };
 const BASE = {
   bird: {species: 'bird', view: 'orbit', camDrift: true, size: 1, speed: 1, neighbors: 7, cohesion: 1, alignment: 1, space: 1, edge: 1, momentum: 0.5, jitter: 0.6, mill: 0,
@@ -1630,6 +1730,8 @@ const PLACES = {
   desert: {name: 'Desert', species: 'bird', p: {tod: 0.47, clouds: 0.15, mist: 0, haze: 0.8}},
   ocean:  {name: 'Open ocean', species: 'fish', p: {}},
   lagoon: {name: 'Lagoon', species: 'fish', p: {}},
+  kelp:   {name: 'Kelp forest', species: 'fish', p: {}},
+  reef:   {name: 'Coral reef', species: 'fish', p: {}},
 };
 const BEHAVES = {
   roost:  {name: 'Evening roost', species: 'bird', p: {}},
@@ -1654,6 +1756,8 @@ const PRESETS = [
   {id: 'open-ocean', name: 'Open Ocean', note: 'A school on the move', place: 'ocean', behave: 'school'},
   {id: 'milling', name: 'Milling Torus', note: 'Circling in a lagoon', place: 'lagoon', behave: 'mill'},
   {id: 'bait-ball', name: 'Bait Ball', note: 'Packed tight under threat', place: 'ocean', behave: 'ball'},
+  {id: 'kelp-forest', name: 'Kelp Forest', note: 'Threading the stalks', place: 'kelp', behave: 'school'},
+  {id: 'coral-reef', name: 'Coral Reef', note: 'Shallows over coral heads', place: 'reef', behave: 'school'},
 ].map(makeScene);
 /* a place and a behaviour with nothing else set: the built-in scene if one is exactly that, else an unnamed combination */
 const sceneFor = (place, behave) => PRESETS.find((p) => p.place === place && p.behave === behave && !Object.keys(p.own).length) || makeScene({place, behave});
@@ -2253,6 +2357,14 @@ function hunters(){
 /* =====================================================================
    Per-frame parameters (with ebb and flow)
    ===================================================================== */
+/* The wind, or under water the current: a steady drift whose direction belongs to the sky drawn for this seed and veers
+   slowly, with gusts. Every animal is carried by it (they fly through moving air), so does the dust in the water. */
+let flowPos = [0, 0, 0];
+function flowNow(){
+  const az = (look.seed ? look.seed[0] : 0) * 1.7 + 0.3 * Math.sin(simTime * 0.021);
+  const mag = P.wind * (P.species === 'bird' ? 3.0 : 0.45) * (1 + 0.35 * dn(simTime * 1.3, 5));
+  return [Math.cos(az) * mag, 0, Math.sin(az) * mag];
+}
 const dn = (t, s) => 0.55 * Math.sin(t * 0.071 + s * 1.7) + 0.3 * Math.sin(t * 0.143 + s * 4.1) + 0.15 * Math.sin(t * 0.297 + s * 2.3);
 function effective(dt){
   const sp = SP[P.species]; const D = P.drift; const t = simTime;
@@ -2352,6 +2464,7 @@ function simPass(dt, E){
   gl.uniform4f(CUR.u.uClick, click.p[0], click.p[1], click.p[2], ck > 0.02 ? ck : 0); u1f('uClickR', sp.fearR * 0.9 * P.fear);
   u3f('uRoost', roost); u1f('uRoostR', homeR); u1f('uWRoost', sp.wRoost * (P.species === 'fish' ? 1 + P.mill * 0.6 : 1) * Math.max(0.6, Math.min(2.4, P.speed * P.speed))); u1f('uWAlt', sp.wAlt); u1f('uMill', P.species === 'fish' ? P.mill : 0);
   u1f('uWind', E.wind); u1f('uWindScale', E.windScale);
+  { const f = flowNow(); u3f('uFlowV', f); flowPos = V3.add(flowPos, V3.mul(f, dt)); }
   const H = hunters(), hp = new Float32Array(12), hv = new Float32Array(12), ht = new Float32Array(4);
   H.forEach((h, i) => { hp.set(h.p, i * 3); hv.set(h.v, i * 3); ht[i] = h.threat; });
   gl.uniform3fv(CUR.u.uHPos, hp); gl.uniform3fv(CUR.u.uHVel, hv); gl.uniform1fv(CUR.u.uHThreat, ht); u1i('uHN', H.length);
@@ -2366,6 +2479,7 @@ function simPass(dt, E){
   u1f('uExcite', P.panic); u1f('uThresh', 0.5); u1f('uRefract', 1.6); u1f('uWave', P.wave);
   u1f('uSpont', P.ripples / 60 * dt / S.N); u1f('uBlind', sp.blind);
   const sc = SCENES[preset.scene];
+  u1i('uObst', sc.obst || 0);
   u2f('uBounds', sc.kind === 'sky' ? 16 : sc.floor + 4, sc.kind === 'sky' ? 400 : -3);
   fullscreen();
   S.cur = nx;
@@ -2434,7 +2548,10 @@ function render(){
     u3f('uWTop', wTop); u3f('uWDeep', wDeep); u3f('uSand', lin(sc.sand)); u3f('uLightDir', LIGHT_DIR); u3f('uLightCol', lightCol);
     u1f('uFloor', sc.floor); u1f('uFog', sc.fog * (0.4 + P.haze));
   }
+  u1i('uObst', sc.obst || 0); uM4('uVP', cam.VP);
+  if (sc.obst) { gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.ALWAYS); gl.depthMask(true); }      // the stalks and coral heads write their depth, so they can hide fish
   fullscreen();
+  if (sc.obst) { gl.depthFunc(gl.LESS); gl.disable(gl.DEPTH_TEST); }
 
   // agents
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
@@ -2497,7 +2614,7 @@ function render(){
   const ring = (simTime - click.t) / 0.9;
   if (!sky || lure || (ring >= 0 && ring < 1) || inspect.id >= 0 || inspect.hunter) {
     gl.depthMask(false); gl.blendFunc(gl.ONE, gl.ONE);
-    use(PR.mote); uM4('uVP', cam.VP); u3f('uCam', cam.pos); u1f('uTime', simTime); u1f('uPx', pxScale); u1f('uBox', 70);
+    use(PR.mote); uM4('uVP', cam.VP); u3f('uCam', cam.pos); u3f('uDrift', flowPos); u1f('uTime', simTime); u1f('uPx', pxScale); u1f('uBox', 70);
     gl.bindVertexArray(emptyVAO);
     if (!sky) { u1i('uSingle', 0); u3f('uCol', V3.mul(lightCol, 0.22)); gl.drawArrays(gl.POINTS, 0, coarse ? 1200 : 2600); }
     if (lure || (P.cursor === 'hunt' && toolHeld())) { u1i('uSingle', 1); u3f('uLure', pointer.world); u3f('uCol', sky ? V3.mul(pal.G, 0.7) : V3.mul(lightCol, 0.9)); gl.drawArrays(gl.POINTS, 0, 1); }
@@ -2629,7 +2746,7 @@ const CTRL = [
   {g: 'gHunter', k: 'ripples', label: 'Startles per minute', min: 0, max: 8, step: 0.5, f: (v) => (+v).toFixed(1), info: 'Startles that begin on their own somewhere in the flock, with no hunter.'},
 
   {g: 'gHunter', k: 'showHunter', label: 'Show the hunter', type: 'toggle', info: 'Turn off to keep only its effect on the flock.'},
-  {g: 'gAir', k: 'wind', label: 'Wind', labelFish: 'Current', min: 0, max: 1.4, step: 0.01, info: 'A shared push that carries the whole flock around, with gentle eddies. It also moves the clouds.'},
+  {g: 'gAir', k: 'wind', label: 'Wind', labelFish: 'Current', min: 0, max: 1.4, step: 0.01, info: 'The air or water itself moves and carries every animal with it, with gusts and eddies, so the flock has to work back against it to stay over home. In air it is stronger higher up and moves the clouds; in water it carries the drifting specks.'},
   {g: 'gAir', k: 'turbulence', label: 'Eddy size', min: 0, max: 1, step: 0.01, info: 'Higher values make the eddies smaller and busier.'},
   {g: 'gAir', k: 'drift', label: 'Slow drift', min: 0, max: 1, step: 0.01, info: 'Slow automatic swings in cohesion, spacing and speed over minutes.'},
   {g: 'gAir', k: 'wander', label: 'Roaming', min: 0.2, max: 1.6, step: 0.01, info: 'How far the flock roams from its home spot, so it comes nearer and goes farther.'},
@@ -2938,7 +3055,7 @@ function note(msg, force){
 }
 const notes = {
   wave: null, shape: '', split: false, splitAt: 0, alarmAt: -1e9, hunters: new Map(), t: 0,
-  reset(){ this.wave = null; this.shape = ''; this.split = false; this.hunters = new Map(); this.t = simTime; },
+  reset(){ this.wave = null; this.shape = ''; this.split = false; this.hunters = new Map(); this.t = simTime; const el = $('note'); if (el) { el.classList.remove('show'); el.textContent = ''; } },
   watch(){
     if (P.notes === false || saverOn || !stats.valid || simTime - this.t < 6) return;
     const bird = P.species === 'bird', one = bird ? 'flock' : 'school';

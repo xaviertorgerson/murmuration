@@ -36,8 +36,10 @@ is not pressed.
 
 **Tune** (top right) holds everything else.
 
-- **A scene is three choices:** the species (starlings or fish), the place and the behaviour. The built-in
-  scenes are pairings of those; any place can be paired with any behaviour of the same species. Changing
+- **A scene is three choices:** the species (starlings or fish), the place and the behaviour. Starlings
+  have reed beds, a still lake, open sea, mountains and desert; fish have open ocean, a lagoon, a kelp
+  forest and a coral reef. The built-in scenes are pairings of a place and a behaviour; any place can be
+  paired with any behaviour of the same species. Changing
   the place or the behaviour does not restart anything: the same animals carry on and respond.
 - **Shape** runs from a ball to a thin slab. **Field notes** is a quiet line under the title that names
   what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.
@@ -103,6 +105,13 @@ None of these three has been tried yet. If one fails, please open an issue.
   (Procaccini et al. 2011).
 - **Hunters.** A peregrine circles above, stoops through the edge of the flock at 46 m/s, pulls out
   below and climbs back. Hawks give chase. For fish there are sharks and tuna.
+- **Moving air and water.** The wind, or under water the current, carries every animal with it, stronger
+  higher up, with gusts and eddies, so the flock has to work back against it to stay over home. It is a
+  flow field, not a fluid solver: there are no thermals or pressure systems, and light is not bent by it.
+- **Things in the way.** In the kelp forest and on the reef, stalks and coral heads are placed by hashing
+  a grid. The same function tells the backdrop where to draw them and the fish where not to swim, and they
+  write depth so a fish behind one is hidden. The sea floor itself is flat, and the starling places have
+  no obstacles yet.
 - **Drawing.** Each animal is a jointed mesh moved by what it is doing: wingbeats quicken with effort,
   wings draw in on a glide down, the tail fans in a turn, a fish's spine curves into its turn. There are
   two bodies for each: a simple one for the thousands far away and a detailed one (feathered wingtips,
