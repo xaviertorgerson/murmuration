@@ -41,7 +41,7 @@ Nothing follows a pointer that is not pressed.
 
 **Three views.** *Orbit* circles the flock at a distance fitted to its size and to the shape of your
 screen. *From the ground* stands at one spot by the roost and follows the flock with a lens that widens
-and narrows to keep it filling about half the frame, as a photographer would. *Ride along* flies behind
+and narrows to keep it filling most of the frame, as a photographer would. *Ride along* flies behind
 one bird. Left alone, the camera is never quite still: it circles slowly, rises and sinks a little, and
 breathes in and out. Zooming out stops where a bird would fall under about a pixel and a third on your
 screen, so a small or coarse screen stays closer. The flock's home is wider across your view than along
@@ -122,7 +122,7 @@ None of these three has been tried yet. If one fails, please open an issue.
   A travelling school of fish does the same, more gently; milling rings and bait balls keep their own rules.
 - **Alarm travels too.** A startled bird startles its neighbours, so a pulse runs away from an attacking
   falcon as a ripple across the slab, the model's version of the waves filmed in real flocks under attack
-  (Procaccini et al. 2011).
+  (Procaccini et al. 2011). Birds close up as it passes, which darkens the band a little.
 - **Hunters.** A peregrine circles above, stoops through the edge of the flock at 46 m/s, pulls out
   below and climbs back. Hawks give chase. For fish there are sharks and tuna.
 - **Moving air and water.** The wind, or under water the current, carries every animal with it, stronger
@@ -130,8 +130,9 @@ None of these three has been tried yet. If one fails, please open an issue.
   flow field, not a fluid solver: there are no thermals or pressure systems, and light is not bent by it.
 - **Things in the way.** In the kelp forest and on the reef, stalks and coral heads are placed by hashing
   a grid. The same function tells the backdrop where to draw them and the fish where not to swim, and they
-  write depth so a fish behind one is hidden. The sea floor itself is flat, and the starling places have
-  no obstacles yet.
+  write depth so a fish behind one is hidden. The floor there is long low dunes, from one function shared
+  the same way. The starling places have nothing to fly around: nothing in them reaches the height a
+  flock displays at.
 - **Drawing.** Each animal is a jointed mesh moved by what it is doing: wingbeats quicken with effort,
   wings draw in on a glide down, the tail fans in a turn, a fish's spine curves into its turn. There are
   two bodies for each: a simple one for the thousands far away and a detailed one (feathered wingtips,
@@ -164,6 +165,13 @@ flown for a minute and stayed whole. Tightness at its maximum with Restlessness 
 third of the time; the calm end of Restlessness was made less extreme and it now splits about as rarely as
 the default (3% over four runs).
 
+Then both ends of every flight lever were flown for a minute, for starlings and for fish (92 runs). For
+starlings 42 of 46 ends kept one flock. The four that did not (Spacing at its lowest, and Edge pull, Wind
+and Alarm wave at their highest) had their sliders shortened and were flown again: whole in every run but
+one, which was in more than one body 11% of the time with the wind at its new maximum. So a slider now
+ends where the flock still holds together, and the range depends on the species. For fish no end packed,
+froze or scattered the school, so nothing was shortened.
+
 Fish were measured the same way. Neighbours are about one body length apart in a travelling school and
 three quarters of one in a bait ball, schools do not pass through each other, and a travelling school
 divides and rejoins now and then (one run in five). Their rules were left alone apart from two that act
@@ -174,13 +182,14 @@ measurements.
 
 ## Known limits
 
-- The veil does not yet fold over itself or show clear dark lines where birds bunch, as the largest real
-  flocks do. It is a sheet that rolls, thickens into a ball and thins again.
+- The veil does not yet fold over itself, and the dark lines where birds bunch are faint next to those
+  of the largest real flocks. It is a sheet that rolls, thickens into a ball and thins again.
 - One turn at a time is kept with knowledge no single bird has: the page counts how many birds are
   turning. Real flocks manage it by eye.
 - Birds still fly closer together than measured flocks. With tens of thousands of birds instead of
   hundreds of thousands, real spacing reads as pale dots rather than a dark sheet.
-- The ground is flat and the starling places have nothing to fly around.
+- The starling places have nothing to fly around, and their ground is a painted skyline. Only the kelp
+  forest and the reef have an uneven floor.
 - The comparison with the six video clips was made before the turn rules were rewritten and has not been
   repeated since.
 - Runs differ even with the same seed, so the measurements above are noisy.

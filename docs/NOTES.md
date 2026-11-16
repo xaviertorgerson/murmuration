@@ -78,6 +78,13 @@ before and after; exact positions will differ (the shader is recompiled), statis
 - How far a turn stretches the flock is `speed x crossing time x angle / 2`. It does not depend on the
   turn's rate. Shorten the crossing time or the angle, not the rate.
 - A seed draws the flight levers from a clipped bell curve (`VARY`). The corners were flown and are safe.
+- **The sweep.** Both ends of every flight lever were flown for a simulated minute per species (92 runs).
+  Starlings: 42 of 46 ends stayed one flock; the four that did not (Spacing at its minimum, Edge pull,
+  Wind and Alarm wave at their maximum) were pulled in, in `LIMIT`, and flown again. Fish: no end packed,
+  froze or scattered the school; it divides and rejoins at any setting, as it does at the defaults, so
+  nothing was pulled in. One run per end is noisy: an end that splits under a quarter of the time is not
+  evidence of anything.
+- A slider's range is `LIMIT` for the current species; links and saved scenes are clamped to it.
 
 ## Cost (Apple M5, 1.5 million pixels)
 
@@ -93,7 +100,6 @@ follows the flock's size. Zoom-out stops where a bird would fall under about a p
 
 ## Open
 
-- Uneven ground; obstacles for the starling places.
-- Folds and lines of condensation in the veil.
-- A sweep of every lever's safe range (only the seeded range and two dials were flown).
+- Folds in the veil; the lines of condensation are faint.
+- Terrain for the starling places. Nothing in them reaches display height, so it would be scenery only.
 - Safari, Firefox, real phones and trackpads.

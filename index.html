@@ -296,6 +296,8 @@ const OBST = `
 /* Things standing on the sea floor, placed by hashing a grid: the same function tells the backdrop where to draw them
    and the fish where not to swim. kind 1: kelp, tall stalks. kind 2: reef, rounded coral heads. */
 const float OG = 13.0;                                   // grid cell, metres; each thing stays inside its own cell
+// the floor itself is not flat where things stand on it: long low dunes, in metres above the nominal depth
+float floorH(vec2 q){ return 2.4 * sin(q.x * 0.071 + 1.3) * cos(q.y * 0.053) + 1.5 * sin(q.x * 0.023 - q.y * 0.037 + 0.7); }
 vec4 obstAt(vec2 cell, int kind){                        // centre x, centre z, radius, height (radius 0: nothing here)
   vec2 h = fract(sin(vec2(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)))) * 43758.5453);
   float h3 = fract(sin(dot(cell, vec2(419.2, 371.9))) * 43758.5453);
@@ -471,7 +473,7 @@ void main(){
     flee += normalize(away * 0.55 + side) * uFlee * uHThreat[h] * f * f;
     if (f * uHThreat[h] > fear * threat) { fear = f; threat = uHThreat[h]; }
   }
-  float rs = uSep * (1.0 + (uSpecies == 0 ? 0.35 : 1.3) * fear * fear * threat) * (1.0 - 0.18 * alarm - (uSpecies == 0 ? 0.32 * e : 0.0));   // (birds bunch as the alarm passes: a dark line through the veil)
+  float rs = uSep * (1.0 + (uSpecies == 0 ? 0.35 : 1.3) * fear * fear * threat) * (1.0 - 0.18 * alarm - (uSpecies == 0 ? 0.5 * e : 0.0));   // (birds bunch as the alarm passes: a dark line through the veil)
 
   // what each bird can see: its few nearest neighbours
   vec4 NA = texelFetch(uNbrA, uv, 0), NB = texelFetch(uNbrB, uv, 0);
@@ -528,7 +530,7 @@ void main(){
       acc += (cv - nS * cn * uSheet) * (0.35 + 0.65 * roomT);
       float zo = dot(coh / cnt, nS);
       acc += nS * clamp((zo - clamp(zo, -uThick, uThick)) * 12.0, -9.0, 9.0) * uSheet * (1.0 - 0.5 * clamp(alarm, 0.0, 1.0));
-      acc += (coh / cnt) * e * uWave * 9.0;      // and bunch as the alarm passes
+      acc += (coh / cnt) * e * uWave * 24.0;     // and bunch as the alarm passes: the dark line that runs through the veil
     } else acc += cv;
   } else md = X2.z;
 
@@ -635,7 +637,7 @@ void main(){
     vec3 dl3 = uLurePos - p; float L = length(dl3) + 1e-3;
     acc += dl3 / L * uLure * uSpeed * (0.25 + 0.9 * exp(-L / (uFearR * 2.0)));
   }
-  direct.y += max(0.0, uBounds.x - p.y) * 3.0 - max(0.0, p.y - uBounds.y) * 3.0;
+  direct.y += max(0.0, uBounds.x + (uSpecies == 1 && uObst > 0 ? floorH(p.xz) : 0.0) - p.y) * 3.0 - max(0.0, p.y - uBounds.y) * 3.0;
   if (uSpecies == 1 && uObst > 0) {
     // kelp stalks and coral heads: veer early if one is dead ahead, and never swim through it
     float floorY = uBounds.x - 4.0; vec2 cb = floor(p.xz / OG - 0.5), f2 = normalize(fwd.xz + vec2(1e-4, 0.0)), side = vec2(-f2.y, f2.x);
@@ -643,12 +645,12 @@ void main(){
       vec4 ob = obstAt(cb + vec2(float(i & 1), float(i >> 1)), uObst);
       if (ob.z <= 0.0) continue;
       if (uObst == 1) {
-        if (p.y > min(floorY + ob.w, -1.5) + 1.0) continue;
+        if (p.y > min(floorY + floorH(ob.xy) + ob.w, -1.5) + 1.0) continue;
         vec2 dv = p.xz - ob.xy; float dd = length(dv) + 1e-3, R = ob.z * 2.0 + 0.9;
         if (dd < R) direct.xz += dv / dd * (1.0 - dd / R) * 22.0;
         else if (dd < R + 3.5) { float ahead = dot(f2, -dv / dd); if (ahead > 0.6) acc.xz += side * (dot(side, dv) > 0.0 ? 1.0 : -1.0) * 7.0 * ahead * (1.0 - (dd - R) / 3.5); }
       } else {
-        vec3 dv = p - vec3(ob.x, floorY - 0.25 * ob.z, ob.y); float dd = length(dv) + 1e-3, R = ob.z + 1.1;
+        vec3 dv = p - vec3(ob.x, floorY + floorH(ob.xy) - 0.25 * ob.z, ob.y); float dd = length(dv) + 1e-3, R = ob.z + 1.1;
         if (dd < R) direct += dv / dd * (1.0 - dd / R) * 22.0;
         else if (dd < R + 3.5) { float ahead = dot(fwd, -dv / dd); if (ahead > 0.6) acc += (vec3(0.0, 1.0, 0.0) * 0.8 + vec3(side.x, 0.0, side.y) * (dot(side, dv.xz) > 0.0 ? 1.0 : -1.0)) * 6.0 * ahead * (1.0 - (dd - R) / 3.5); }
       }
@@ -1097,10 +1099,17 @@ vec3 underwater(vec3 d, out float hitT){
   } else {
     float t = (uFloor - ro.y) / d.y;
     vec2 fp = ro.xz + d.xz * t;
+    float slope = 1.0;
+    if (uObst > 0) {
+      for (int i = 0; i < 4; i++) { t = (uFloor + floorH(fp) - ro.y) / d.y; fp = ro.xz + d.xz * t; }
+      tFloor = t;
+      vec3 nf = normalize(vec3(floorH(fp - vec2(0.6, 0.0)) - floorH(fp + vec2(0.6, 0.0)), 1.2, floorH(fp - vec2(0.0, 0.6)) - floorH(fp + vec2(0.0, 0.6))));
+      slope = (0.62 + 0.5 * max(dot(nf, uLightDir), 0.0)) * (0.9 + 0.045 * floorH(fp));      // crests catch the light, troughs sit in shade
+    }
     float sand = 0.55 + 0.45 * fbm(fp * 0.15);
     vec3 fl = uSand * sand * (0.35 + 1.2 * caustic(fp * 0.35, uTime));
     fl *= mix(0.4, 1.0, smoothstep(0.35, 0.6, fbm(fp * 0.04 + 7.0)));
-    fl *= exp(uFloor * 0.018);
+    fl *= exp(uFloor * 0.018) * slope;
     if (uObst == 2) fl *= mix(vec3(1.0), vec3(0.55, 0.8, 0.62), smoothstep(0.5, 0.7, fbm(fp * 0.11 + 3.0)));      // patches of weed between the coral heads
     c = mix(c, fl, exp(-t * uFog));
   }
@@ -1116,17 +1125,17 @@ vec3 underwater(vec3 d, out float hitT){
         float hue = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
         if (uObst == 1) {
           // kelp: a stalk that sways more the higher it goes, wrapped in ragged fronds
-          float top = min(uFloor + ob.w, -1.5), r = ob.z * 2.0;
+          float y0 = uFloor + floorH(ob.xy), top = min(y0 + ob.w, -1.5), r = ob.z * 2.0;
           vec2 oc = ro2 - ob.xy; float a = dot(rd2, rd2), b = dot(oc, rd2), cc = dot(oc, oc) - r * r, disc = b * b - a * cc;
           if (disc > 0.0) {
             float t = (-b - sqrt(disc)) / a;
             if (t > 2.5 && t < tEnd) {
-              float y = ro.y + d.y * t, up = clamp((y - uFloor) / max(top - uFloor, 1.0), 0.0, 1.0);
+              float y = ro.y + d.y * t, up = clamp((y - y0) / max(top - y0, 1.0), 0.0, 1.0);
               vec2 sw = vec2(sin(uTime * 0.55 + ob.x), cos(uTime * 0.47 + ob.y)) * 1.1 * up * up;
               oc = ro2 - ob.xy - sw; b = dot(oc, rd2); cc = dot(oc, oc) - r * r; disc = b * b - a * cc;
               if (disc > 0.0) {
                 t = (-b - sqrt(disc)) / a; y = ro.y + d.y * t;
-                if (t > 2.5 && t < tEnd && y > uFloor && y < top) {
+                if (t > 2.5 && t < tEnd && y > y0 - 1.0 && y < top) {
                   vec2 hp = ro2 + rd2 * t - ob.xy - sw; float ang = atan(hp.y, hp.x), edge = 1.0 - abs(dot(normalize(hp), normalize(rd2)));
                   float frond = fbm(vec2(ang * 2.2 + hue * 9.0, y * 0.55 + hue * 31.0));
                   float alpha = max(smoothstep(0.8, 0.92, 1.0 - edge * 0.999) , smoothstep(0.48, 0.6, frond) * smoothstep(0.0, 0.25, 1.0 - edge)) * smoothstep(top, top - 3.0, y);
@@ -1143,7 +1152,7 @@ vec3 underwater(vec3 d, out float hitT){
           }
         } else {
           // reef: a rounded coral head, half sunk in the sand
-          vec3 cen = vec3(ob.x, uFloor - 0.25 * ob.z, ob.y); vec3 oc = ro - cen;
+          vec3 cen = vec3(ob.x, uFloor + floorH(ob.xy) - 0.25 * ob.z, ob.y); vec3 oc = ro - cen;
           float b = dot(oc, d), cc = dot(oc, oc) - ob.z * ob.z, disc = b * b - cc;
           if (disc > 0.0) {
             float t = -b - sqrt(disc);
@@ -1781,7 +1790,7 @@ const PLACES = {
 };
 const BEHAVES = {
   roost:  {name: 'Evening roost', species: 'bird', p: {}},
-  jumpy:  {name: 'On edge', species: 'bird', p: {panic: 1.35, fear: 1.4, wave: 1.4, ripples: 5, momentum: 0.7, initiate: 1.6, visitors: 2}},
+  jumpy:  {name: 'On edge', species: 'bird', p: {panic: 1.35, fear: 1.4, wave: 1.25, ripples: 5, momentum: 0.7, initiate: 1.6, visitors: 2}},
   school: {name: 'Travelling school', species: 'fish', p: {}},
   mill:   {name: 'Milling ring', species: 'fish', u: 0.06, pitch: 0.38, p: {mill: 1.0, alignment: 1.3, cohesion: 0.8, wander: 0.2, edge: 0.3}},
   ball:   {name: 'Bait ball', species: 'fish', p: {cohesion: 2.2, alignment: 0.6, space: 0.8, speed: 0.7, mill: 0.35, wander: 0.1, fear: 1.3, panic: 1.3, visitors: 2}},
@@ -2216,8 +2225,8 @@ function updateCamera(dt){
     // a tall, narrow screen sees less to either side, so it takes a wider view; and the view is never so wide that a bird
     // falls under about a pixel and a third on this screen
     const dg = V3.len(V3.sub(target, pos));
-    // from the ground the lens follows the flock's size, as a photographer's would: the flock fills about half the frame
-    cam.gfov = cam.gfov || 0.87; cam.gfov += (Math.max(0.22, Math.min(1.05, 5.2 * Math.atan(1.6 * cam.spread / Math.max(dg, 1)))) - cam.gfov) * (1 - Math.exp(-dt * 1.0));
+    // from the ground the lens follows the flock's size, as a photographer's would: the flock fills most of the frame
+    cam.gfov = cam.gfov || 0.87; cam.gfov += (Math.max(0.16, Math.min(1.05, 3.5 * Math.atan(1.6 * cam.spread / Math.max(dg, 1)))) - cam.gfov) * (1 - Math.exp(-dt * 1.0));
     fovT = cam.gfov / cam.szoom * (asp < 1 ? Math.min(1.5, Math.pow(1 / asp, 0.6)) : 1);
     const widest = 2 * Math.atan(sp.size * P.size * (bird ? 1.9 : 1) * canvas.height / (2 * 1.35 * Math.max(dg, 1)));
     fovT = Math.max(20 * Math.PI / 180, Math.min(fovT, widest));
@@ -2238,14 +2247,14 @@ function updateCamera(dt){
     if (sky) pitch = Math.max(pitch, Math.asin(Math.max(-1, Math.min(1, (sc.eye + 1 - tY) / cam.dist))));
     else {
       pitch = Math.min(pitch, Math.asin(Math.max(-1, Math.min(1, (-2.5 - tY) / cam.dist))));
-      pitch = Math.max(pitch, Math.asin(Math.max(-1, Math.min(1, (sc.floor + 3 - tY) / cam.dist))));
+      pitch = Math.max(pitch, Math.asin(Math.max(-1, Math.min(1, (sc.floor + (sc.obst ? 7.5 : 3) - tY) / cam.dist))));
     }
     const yaw = cam.syaw;
     pos = V3.add(cam.target, V3.mul([Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)], cam.dist));
     target = cam.target.slice();
   }
   if (sky) pos[1] = Math.max(sc.eye, pos[1]);
-  else pos[1] = Math.min(-1.5, Math.max(sc.floor + 2, pos[1]));
+  else pos[1] = Math.min(-1.5, Math.max(sc.floor + (sc.obst ? 6.5 : 2), pos[1]));
   cam.pos = pos;
   cam.fov += (fovT - cam.fov) * (1 - Math.exp(-dt * 3));
   cam.near = ride ? (sky ? 0.12 : 0.06) : (sky ? 0.5 : 0.2);
@@ -2903,7 +2912,7 @@ function syncUI(){
     else if (c.type === 'seg') el.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === P[c.k])));
     else if (c.type === 'select') { if (![...el.options].some((o) => +o.value === count)) { const o = document.createElement('option'); o.value = count; o.textContent = count.toLocaleString('en-US') + ' (this seed)'; el.appendChild(o); } el.value = String(count); }
     else if (c.type === 'color') el.value = P[c.k];
-    else { el.value = P[c.k]; const out = row.querySelector('output'); if (out) out.textContent = (c.f || fmt2)(P[c.k]); setFill(el); }
+    else { const [lo, hi] = lim(c); el.min = Math.min(lo, P[c.k]); el.max = Math.max(hi, P[c.k]); el.value = P[c.k]; const out = row.querySelector('output'); if (out) out.textContent = (c.f || fmt2)(P[c.k]); setFill(el); }
   }
   $('airLabel').textContent = fish ? 'Water' : 'Air';
   renderChips();
@@ -2926,12 +2935,26 @@ const MACRO = {tight: ['cohesion', 'space', 'edge', 'speedMatch'], energy: ['jit
    that carry their linked levers with them (applyMacros); the others multiply the scene's own value. Draws are bell-shaped
    and clipped, so no seed lands outside these limits, or outside a slider's own range. */
 const VARY = {tight: [0.16, 0.2, 0.8], energy: [0.16, 0.2, 0.8], alignment: [0.10, 0.8, 1.25], wander: [0.15, 0.7, 1.4], speed: [0.05, 0.9, 1.12], fear: [0.10, 0.8, 1.3], wave: [0.10, 0.8, 1.25]};
-function clampCtrl(k, v, own){ const c = CTRL.find((x) => x.k === k); return c && c.min != null ? Math.max(Math.min(c.min, own), Math.min(Math.max(c.max, own), v)) : v; }
+/* How far each lever may go. A slider's range is the range that was flown and stayed a flock: both ends of every flight
+   lever were run for a simulated minute on a real graphics chip, per species, and an end that broke the flock up, packed
+   it solid or froze it was pulled in to a value that did not. A lever not listed keeps the range it was declared with. */
+const LIMIT = {
+  // starlings, 16,384 birds: of 46 ends flown, four broke the flock up for a quarter of the run or more
+  bird: {space: [0.95, 1.8],      // below this the spacing does not change (it has a floor), and the run at the bottom split
+         edge: [0.3, 1.6],        // 2.2: split a third of the time
+         wind: [0, 1.0],          // 1.4: split a quarter of the time
+         wave: [0.3, 1.25]},      // 1.6: the bunching in the alarm wave tore the sheet (split 40%)
+  // fish: a travelling school divides and rejoins by nature (a run in five at the defaults), and no end of any lever
+  // packed it, froze it or scattered it, so no range is pulled in
+  fish: {},
+};
+function lim(c){ const l = LIMIT[P.species] && LIMIT[P.species][c.k]; return l ? [Math.max(c.min, l[0]), Math.min(c.max, l[1])] : [c.min, c.max]; }
+function clampCtrl(k, v, own){ const c = CTRL.find((x) => x.k === k); if (!c || c.min == null) return v; const [lo, hi] = lim(c); return Math.max(Math.min(lo, own), Math.min(Math.max(hi, own), v)); }
 function applyPins(){
   let macro = false;
   for (const k in MACRO) if (k in pins) { P[k] = pins[k]; macro = true; }
   if (macro) applyMacros();
-  for (const k in pins) if (!(k in MACRO)) P[k] = pins[k];
+  for (const k in pins) if (!(k in MACRO)) { const c = CTRL.find((x) => x.k === k); P[k] = c && c.min != null && typeof pins[k] === 'number' ? Math.max(lim(c)[0], Math.min(lim(c)[1], pins[k])) : pins[k]; }
 }
 function drawVaried(){
   const B = Object.assign({}, BASE[P.species], preset.p), v = variety();
