@@ -398,7 +398,7 @@ uniform vec3 uHPos[4], uHVel[4]; uniform float uHThreat[4]; uniform int uHN; uni
 uniform float uXp[10];
 uniform vec3 uLurePos; uniform float uLure;
 uniform float uExcite, uThresh, uRefract, uWave, uSpont, uBlind;
-uniform float uSheet, uFlow, uQuiet, uTurnRate;
+uniform float uSheet, uFlow, uWaveC, uTurnRate;
 uniform vec3 uFlowV; uniform int uObst; uniform float uThick; uniform vec3 uViewF;
 uniform vec4 uWaveO; uniform float uWaveCode;
 uniform vec2 uBounds;
@@ -479,7 +479,7 @@ void main(){
   vec4 NA = texelFetch(uNbrA, uv, 0), NB = texelFetch(uNbrB, uv, 0);
   float nb[8] = float[8](NA.x, NA.y, NA.z, NA.w, NB.x, NB.y, NB.z, NB.w);
   vec3 sep = vec3(0.0), ali = vec3(0.0), coh = vec3(0.0), edge = vec3(0.0), nst = vec3(0.0);
-  float cnt = 0.0, maxE = 0.0, md = 0.0, nspd = 0.0, dAhead = 1e3, dBehind = 1e3, relay = -1.0, nbTurn = 0.0;
+  float cnt = 0.0, maxE = 0.0, md = 0.0, nspd = 0.0, dAhead = 1e3, dBehind = 1e3;
   for (int k = 0; k < 8; k++) {
     if (k >= myK) break;
     int j = int(nb[k]);
@@ -500,7 +500,6 @@ void main(){
     vec4 a1j = texelFetch(uAux1, ju, 0);
     nst += a1j.xyz;
     // a neighbour that began a turn a moment ago (45-110 ms): this bird copies it
-    if (uSpecies == 0 && a1j.w > 0.0) { float qj = floor(a1j.w / 16.0), el = a1j.w - qj * 16.0; if (el > 0.03 && el < 0.1) relay = max(relay, qj); nbTurn = 1.0; }
     maxE = max(maxE, Pj.w);
     if (fa > 0.5) dAhead = min(dAhead, dist);
     if (fa < -0.5) dBehind = min(dBehind, dist);
@@ -657,58 +656,24 @@ void main(){
     }
   }
 
-  // Turns. Starlings: a few birds (usually at the edge) decide to turn; each neighbour copies the turn a reaction-time later,
-  // so the turn sweeps across the whole flock at 20-40 m/s without fading, as measured in real flocks.
-  // Fish keep their older, softer rule (a turn spreads through turn momentum).
-  // Turns. A turn is started by a bird or two at the edge and copied by each neighbour a reaction time later, so it
-  // sweeps the flock as a wave at 20-40 m/s without fading, as measured in real flocks (Attanasi et al. 2014). Every
-  // bird makes the same turn: the same way round, at the same rate, by the same angle. The rate is slow enough that the
-  // wave has crossed the flock before the first birds have turned far, which is what keeps a big flock in one piece:
-  // big flocks wheel slowly, small ones dart. One turn at a time; the next starts when the last has passed.
+  // Turns. Starlings turn as one event, and the page conducts it (conductTurns): it names one turn at a time, which way
+  // round and how far (uWaveCode), where it begins and when (uWaveO), how fast the news of it travels (uWaveC, within the
+  // 20-40 m/s measured in real flocks: Attanasi et al. 2014) and the rate of turn, held for the whole of it (uTurnRate).
+  // A bird begins the turn at the moment the wave from that point reaches it, and every bird makes the same turn. So the
+  // moment of turning changes smoothly across the flock: the turn shears the flock, as it does a real one, and tears it
+  // nowhere. (While the turn was passed from neighbour to neighbour, birds it reached by a roundabout way began a few
+  // tenths of a second after the birds beside them and ended the turn metres from them: two bodies flying side by side.)
+  // Fish keep their own, softer rule: a fish at the edge turns and the turn spreads through the school's turn momentum.
   float itT = 0.0, itA = 0.0, itM = 0.0;      // time into the turn, its direction (an angle around the line of flight) and its size (0 to 7)
-  float lastQ = -1.0, tIdle = 99.0;            // a bird between turns remembers the last one it made and how long ago it finished
   if (intent > 0.0) {
     if (uSpecies == 0) { float qi = floor(intent / 16.0); itT = intent - qi * 16.0; itM = floor(qi / 64.0); itA = (qi - itM * 64.0) / 64.0 * 6.2831853; }
     else { float qi = floor(intent / 4.0); itT = intent - qi * 4.0; itA = qi / 512.0 * 6.2831853; }
-  } else if (intent < 0.0 && uSpecies == 0) { float qi = floor(-intent / 16.0); tIdle = -intent - qi * 16.0; lastQ = qi - 1.0; }
+  }
   if (uSpecies == 0) {
     const float REST = 1.0;
-    // Two turns begun at the same moment in different parts of the flock must not both stand, or the flock parts company.
-    // A bird gives up its own turn for a different one just starting beside it if that one is the bigger, or if its own is
-    // already old; so the biggest of the turns begun together, or the newest, carries the whole flock.
-    // (And a turn it has just made cannot come round and catch it again: without that, a turn could circle the flock for ever.)
-    float myQ = itT > 0.0 ? floor(intent / 16.0) : -1.0;
-    float late = uTime - uWaveO.w - distance(p, uWaveO.xyz) / 27.0;
-    bool again = itT <= 0.0 && tIdle < 6.0;
-    if (relay >= 0.0 && relay != myQ && !(again && relay == lastQ) && (itT <= 0.0 || relay > myQ || itT > 1.0)) { itM = floor(relay / 64.0); itA = (relay - itM * 64.0) / 64.0 * 6.2831853; itT = 0.001; }
-    else if (uWaveCode >= 0.0 && uWaveCode != myQ && !(again && uWaveCode == lastQ) && (itT <= 0.0 || uWaveCode > myQ || itT > 1.0) && late > 0.15 && late < 0.6) {
-      // A bird the turn did not reach through its neighbours (across a gap, out on its own) still sees the flock wheel,
-      // and follows a moment after the turn should have got to it.
-      itM = floor(uWaveCode / 64.0); itA = (uWaveCode - itM * 64.0) / 64.0 * 6.2831853; itT = 0.001;
-    }
-    else if (itT <= 0.0) {
-      if (cnt > 0.0 && uQuiet > 0.0 && nbTurn < 0.5) {
-        // leaving home: the birds out in front turn back, and the turn sweeps the flock behind them, so the whole flock
-        // comes round together instead of the front folding back through the rear
-        vec2 dh = uRoost.xz - p.xz; dh += uViewF.xy * dot(dh, uViewF.xy) * uViewF.z; float dl = length(dh) + 1e-3; vec2 hd = dh / dl;
-        vec2 f2 = normalize(fwd.xz + vec2(1e-4, 0.0));
-        float out_ = smoothstep(uRoostR * 0.5 * uXp[2], uRoostR * 0.72 * uXp[2], dl) * smoothstep(0.1, 0.5, -dot(f2, hd));
-        float pr = uInit * uXp[5] * uDt * 0.09 / (0.15 * float(uN)) * smoothstep(0.25, 0.7, edgeness) * exp(0.7 * bold + 0.8 * mood);
-        float prHome = uDt * 5.0 / float(uN) * out_;
-        float r0 = rnd(hashu(uid * 0x27d4eb2du ^ st));
-        if (r0 < prHome) {
-          float want = acos(clamp(dot(f2, hd), -1.0, 1.0)) * (0.75 + 0.35 * rnd(hashu(uid ^ st ^ 0x5bd1e995u)));
-          itA = dot(rt.xz, hd) > 0.0 ? 0.0 : 3.14159265;
-          if (abs(f2.x * hd.y - f2.y * hd.x) < 0.05) itA = uSwirl > 0.0 ? 0.0 : 3.14159265;   // home dead astern: everyone goes round the same way
-          itM = clamp(floor(want / 0.33 - 0.5), 1.0, 4.0);      // at most about a right angle at a time; a second turn follows if it is still heading out
-          itT = 0.001;
-        } else if (r0 < prHome + pr) {
-          vec3 inw = edge - fwd * dot(edge, fwd);
-          itA = atan(dot(inw, upP), dot(inw, rt)) + (rnd(hashu(uid ^ st ^ 0x5bd1e995u)) - 0.5) * 3.4;
-          float rm = rnd(hashu(uid * 13u ^ st)); itM = floor(rm * rm * 6.0);        // mostly small turns, now and then a big one
-          itT = 0.001;
-        }
-      }
+    float late = uTime - uWaveO.w - distance(p, uWaveO.xyz) / uWaveC;
+    if (itT <= 0.0 && uWaveCode >= 0.0 && late >= 0.0 && late < 0.5) {
+      itM = floor(uWaveCode / 64.0); itA = (uWaveCode - itM * 64.0) / 64.0 * 6.2831853; itT = 0.001 + min(late, 0.05);
     }
     if (itT > 0.0) {
       float rate = uTurnRate * uXp[4] * 0.5 * (uXp[8] > 0.0 ? 0.75 / uXp[8] : 1.0);
@@ -716,8 +681,8 @@ void main(){
       float env = smoothstep(0.0, 0.3, itT) * (1.0 - smoothstep(DUR - 0.3, DUR, itT));
       acc += (rt * cos(itA) + upP * sin(itA) * 0.5) * uSpeed * rate * env;
       itT += uDt;
-      if (itT >= min(DUR + REST, 15.9)) { itT = 0.0; lastQ = min(floor(fract(itA / 6.2831853) * 64.0 + 0.5), 63.0) + 64.0 * itM; tIdle = 0.0; }   // after the turn, a short rest before it can be swept up again
-    } else tIdle = min(tIdle + uDt, 15.9);
+      if (itT >= min(DUR + REST, 15.9)) itT = 0.0;      // after the turn, a short rest
+    }
   } else {
     if (itT <= 0.0 && cnt > 0.0) {
       float pr = uInit * uDt * 0.03 * smoothstep(0.28, 0.7, edgeness) * exp(0.7 * bold);
@@ -806,7 +771,7 @@ void main(){
     : (1.6 + 1.0 * tB) * (s2 / uSpeed) * (0.75 + 0.5 * effort) * (1.0 + 1.5 * e);
   phase = fract(phase + uDt * freq);
 
-  float packed = itT <= 0.0 ? (uSpecies == 0 && lastQ >= 0.0 ? -(16.0 * (lastQ + 1.0) + tIdle) : 0.0) : uSpecies == 0 ? itT + 16.0 * (min(floor(fract(itA / 6.2831853) * 64.0 + 0.5), 63.0) + 64.0 * itM)
+  float packed = itT <= 0.0 ? 0.0 : uSpecies == 0 ? itT + 16.0 * (min(floor(fract(itA / 6.2831853) * 64.0 + 0.5), 63.0) + 64.0 * itM)
                                                    : itT + 4.0 * min(floor(fract(itA / 6.2831853) * 512.0), 511.0);
   oPos = vec4(p, e);
   oVel = vec4(v, phase);
@@ -1930,7 +1895,7 @@ function seedFlock(){
   const up = (t, d) => { gl.bindTexture(gl.TEXTURE_2D, t); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, W, H, gl.RGBA, gl.FLOAT, d); };
   S.cur = 0; S.ncur = 0;
   up(S.pos[0], pos); up(S.vel[0], vel); up(S.a1[0], a1); up(S.a2[0], a2); up(S.nA[0], nA); up(S.nB[0], nB);
-  stats.c = c.slice(); stats.spread = a * 0.6; stats.valid = true; stats.main = c.slice(); stats.mainR = a * 0.6; stats.wave = null; stats.busy = 0;
+  stats.c = c.slice(); stats.spread = a * 0.6; stats.valid = true; stats.main = c.slice(); stats.mainR = a * 0.6; stats.busy = 0; stats.pts = null; turn.code = -1; turn.free = turn.next = simTime + 3;
   op.c = c.slice(); op.R = a * 1.8;
   pickFollow();
   cam.target = c.slice();
@@ -1999,7 +1964,7 @@ function smallestEig(A){
 }
 function computeStats(){
   let cx = 0, cy = 0, cz = 0, n = 0, vx = 0, vy = 0, vz = 0, ux = 0, uy = 0, uz = 0, busy = 0;
-  const pts = [], vels = [], early = {it: 0, code: -1, p: null}; let alarmed = 0;
+  const pts = [], vels = []; let alarmed = 0;
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const i = (y * 32 + x) * 4, j = (y * 32 + x + 16) * 4;
     const px = sampleArr[i], py = sampleArr[i + 1], pz = sampleArr[i + 2];
@@ -2009,25 +1974,12 @@ function computeStats(){
     const s = Math.hypot(sampleArr[j], sampleArr[j + 1], sampleArr[j + 2]) || 1;
     vx += sampleArr[j] / s; vy += sampleArr[j + 1] / s; vz += sampleArr[j + 2] / s;
     ux += sampleArr[j]; uy += sampleArr[j + 1]; uz += sampleArr[j + 2];
-    if (sampleArr[j + 3] > 0) {
-      busy++;
-      const w = sampleArr[j + 3], code = Math.floor(w / 16), it = w - code * 16;
-      if (it < 1.0 && (code > early.code || (code === early.code && it > early.it))) { early.it = it; early.code = code; early.p = [px - sampleArr[j] * it, py - sampleArr[j + 1] * it, pz - sampleArr[j + 2] * it]; }
-    }
+    if (sampleArr[j + 3] > 0) busy++;
   }
   if (!n) return;
   stats.busy = busy / n;      // the share of birds in a turn or resting after one
   stats.alarm = alarmed / n;  // the share with the alarm wave passing through them now
-  // the turn in progress, for the birds its neighbour-to-neighbour relay misses: which turn, and where and when it began.
-  // It is the one sampled birds have just begun; of several begun together, the biggest (the same rule the birds use).
-  if (P.species === 'bird') {
-    if (busy === 0) stats.wave = null;
-    else if (early.code >= 0) {
-      const t0 = sampleT - early.it, w = stats.wave;
-      if (!w || w.code !== early.code || t0 > w.t0 + 1.0) stats.wave = {code: early.code, t0, o: early.p};
-      else if (t0 < w.t0 - 0.03) { w.t0 = t0; w.o = early.p; }      // an earlier starter of the same turn turned up in the sample
-    }
-  } else stats.wave = null;
+  stats.pts = pts; stats.vels = vels;
   if (isFinite(sampleArr[0] + sampleArr[1] + sampleArr[2])) {
     follow.p = [sampleArr[0], sampleArr[1], sampleArr[2]]; follow.v = [sampleArr[64], sampleArr[65], sampleArr[66]]; follow.t = sampleT;
   }
@@ -2541,7 +2493,55 @@ function densPass(){
   }
   DG.cur = src;
 }
+/* Starlings turn as one event, and the page conducts it. One turn at a time: when the last has left the flock and the
+   birds have rested, the next begins at one bird (out at the edge, or out in front if the flock is leaving home), and
+   every bird starts it when a wave from that point, at turn.c metres a second, reaches it. The rate of turn is fixed for
+   the whole turn, so every bird turns through the same angle. Nothing here is drawn; the shader does the flying. */
+const turn = {code: -1, t0: -1e4, o: [0, 0, 0], c: 27, rate: 0.3, free: 0, next: 0};
+function conductTurns(dt){
+  if (P.species !== 'bird' || !stats.valid || !stats.pts || stats.pts.length < 32 || simTime < turn.free) return;
+  const pts = stats.pts, vels = stats.vels, n = pts.length, xp = P.xp || XP0;
+  // big flocks wheel slowly, small ones dart
+  turn.rate = Math.max(0.12, Math.min(1.3, 0.6 * 30 / (2.6 * Math.max(stats.spread, 4))));
+  let o = -1, ang = 0, mag = 0;
+  { // leaving home: the birds out in front turn back, and the flock comes round behind them
+    const vf = cam.pos && cam.target ? [cam.target[0] - cam.pos[0], cam.target[2] - cam.pos[2]] : [0, 1], vl = Math.hypot(vf[0], vf[1]) || 1;
+    const vk = P.view === 'ride' ? 0 : P.view === 'ground' ? 0.7 : 0.35, vx = vf[0] / vl, vz = vf[1] / vl;
+    const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    let sum = 0; const w = new Float32Array(n), hd = new Array(n);
+    for (let i = 0; i < n; i++) {
+      let hx = roost[0] - pts[i][0], hz = roost[2] - pts[i][2]; const along = hx * vx + hz * vz; hx += vx * along * vk; hz += vz * along * vk;
+      const dl = Math.hypot(hx, hz) + 1e-3, fl = Math.hypot(vels[i][0], vels[i][2]) + 1e-6, fx = vels[i][0] / fl, fz = vels[i][2] / fl;
+      hd[i] = [hx / dl, hz / dl, fx, fz];
+      w[i] = sm(homeR * 0.5 * xp[2], homeR * 0.72 * xp[2], dl) * sm(0.1, 0.5, -(fx * hx + fz * hz) / dl); sum += w[i];
+    }
+    if (rng() < 5 * (sum / n) * dt) {
+      let r = rng() * sum; for (o = 0; o < n - 1; o++) { r -= w[o]; if (r <= 0) break; }
+      const [hx, hz, fx, fz] = hd[o], want = Math.acos(Math.max(-1, Math.min(1, fx * hx + fz * hz))) * (0.75 + 0.35 * rng());
+      const cross = fx * hz - fz * hx;                      // which side home lies on
+      ang = Math.abs(cross) < 0.05 ? (seedVal % 2 ? 0 : Math.PI) : (-fz * hx + fx * hz > 0 ? 0 : Math.PI);
+      mag = Math.max(1, Math.min(4, Math.floor(want / 0.33 - 0.5)));     // at most about a right angle at a time; another follows if it is still heading out
+    }
+  }
+  if (o < 0) {
+    if (simTime < turn.next || rng() > dt * 6) return;
+    // otherwise a bird out at the edge turns, mostly back toward the flock, and usually not far
+    const far = pts.map((q, i) => [Math.hypot(q[0] - stats.main[0], q[1] - stats.main[1], q[2] - stats.main[2]), i]).sort((a, b) => b[0] - a[0]);
+    o = far[Math.floor(rng() * Math.max(1, n * 0.3))][1];
+    const v = vels[o], f = V3.norm(v), rt = V3.norm([-f[2], 0, f[0]]), up = V3.cross(rt, f);
+    const d = V3.sub(stats.main, pts[o]), inw = V3.sub(d, V3.mul(f, V3.dot(d, f)));
+    ang = Math.atan2(V3.dot(inw, up), V3.dot(inw, rt)) + (rng() - 0.5) * 3.4;
+    mag = Math.floor(Math.pow(rng(), 1.3) * 6);
+  }
+  const a64 = Math.min(63, Math.floor((((ang / (2 * Math.PI)) % 1) + 1) % 1 * 64 + 0.5) % 64);
+  turn.code = a64 + 64 * mag; turn.t0 = simTime; turn.o = pts[o].slice();
+  const rate = turn.rate * xp[4] * 0.5 * (xp[8] > 0 ? 0.75 / xp[8] : 1), dur = Math.min((mag + 1) * 0.33 / rate + 0.3, 14.5);
+  let reach = 0; for (const q of pts) reach = Math.max(reach, Math.hypot(q[0] - turn.o[0], q[1] - turn.o[1], q[2] - turn.o[2]));
+  turn.free = simTime + Math.min(reach / turn.c, 4) + dur + 1.0;
+  turn.next = turn.free - Math.log(Math.max(1e-6, rng())) * Math.min(20, 1 / Math.max(P.initiate, 0.05));
+}
 function simPass(dt, E){
+  conductTurns(dt);
   const sp = SP[P.species];
   const nx = 1 - S.cur;
   gl.bindFramebuffer(gl.FRAMEBUFFER, S.simFBO[nx]); gl.viewport(0, 0, S.W, S.H);
@@ -2572,11 +2572,10 @@ function simPass(dt, E){
   u1f('uFearR', sp.fearR * P.fear); u1f('uFlee', sp.flee); u1f('uIndiv', P.indiv);
   const lure = P.cursor === 'lure' && toolHeld();
   u3f('uLurePos', pointer.world); u1f('uLure', lure ? 1 : 0);
-  u1f('uSheet', P.species === 'bird' ? P.sheet * Math.max(0, Math.min(1, 0.62 + 0.75 * dn(simTime * 0.9, 11))) : 0); u1f('uThick', 0.28); u1f('uFlow', P.species === 'bird' ? 0.6 : 0.3 * Math.max(0, 1 - P.mill * 2.5)); u1f('uQuiet', (stats.busy || 0) < 0.04 ? 1 : 0);
+  u1f('uSheet', P.species === 'bird' ? P.sheet * Math.max(0, Math.min(1, 0.62 + 0.75 * dn(simTime * 0.9, 11))) : 0); u1f('uThick', 0.28); u1f('uFlow', P.species === 'bird' ? 0.6 : 0.3 * Math.max(0, 1 - P.mill * 2.5));
   // how fast the flock may turn: the turn wave (about 30 m/s) should cross the flock before the first birds have turned half a radian
-  const wv = P.species === 'bird' ? stats.wave : null;
-  gl.uniform4f(CUR.u.uWaveO, wv ? wv.o[0] : 0, wv ? wv.o[1] : 0, wv ? wv.o[2] : 0, wv ? wv.t0 : 0); u1f('uWaveCode', wv ? wv.code : -1);
-  u1f('uTurnRate', Math.max(0.12, Math.min(1.3, 0.6 * 30 / (2.6 * Math.max(stats.spread, 4)))));
+  { const on = P.species === 'bird' && turn.code >= 0;
+    gl.uniform4f(CUR.u.uWaveO, turn.o[0], turn.o[1], turn.o[2], on ? turn.t0 : -1e4); u1f('uWaveCode', on ? turn.code : -1); u1f('uWaveC', turn.c); u1f('uTurnRate', turn.rate); }
   u1f('uExcite', P.panic); u1f('uThresh', 0.5); u1f('uWave', P.wave);
   // a starling that has passed the alarm on ignores it until the wave has had time to leave the flock, so one startle is one
   // wave and it cannot come round again; fish flash again sooner
@@ -3020,7 +3019,7 @@ function applyScene(sc, live){
   live = !!live && !!S && !!was && was.species === sc.species;
   preset = sc; lastScene[sc.species] = sc;
   if (!live) rng = mulberry32(seedVal ^ (sc.id.length * 2654435761) ^ sc.id.charCodeAt(0) * 40503);
-  P = Object.assign({}, BASE[sc.species], sc.p, {tight: 0.5, energy: 0.5, tour: tourOn != null ? tourOn : true, notes: oldP.notes !== false, power});
+  P = Object.assign({}, BASE[sc.species], sc.p, {tight: 0.5, energy: 0.5, tour: tourOn != null ? tourOn : true, notes: oldP.notes === true, power});
   if (cursor) P.cursor = cursor;
   if (view) P.view = view;
   if (live && was.place === sc.place) { for (const k of SKY_KEYS) if (oldP[k] != null && !(k in sc.own)) P[k] = oldP[k]; }      // same place: the sky stays as it is
@@ -3166,7 +3165,7 @@ let toastT = 0;
    sweeping the flock, the flock flattening or balling up, a hunter arriving, a part breaking away), never scripted. */
 let noteT = 0, noteAt = -1e9;
 function note(msg, force){
-  if (P.notes === false || saverOn) return;
+  if (!P.notes || saverOn) return;
   const now = performance.now(); if (!force && now - noteAt < 5200) return;      // one thing at a time, and not a running commentary
   noteAt = now;
   const el = $('note'); el.textContent = msg; el.classList.add('show'); clearTimeout(noteT); noteT = setTimeout(() => el.classList.remove('show'), 4600);
@@ -3175,7 +3174,7 @@ const notes = {
   wave: null, shape: '', split: false, splitAt: 0, alarmAt: -1e9, hunters: new Map(), t: 0,
   reset(){ this.wave = null; this.shape = ''; this.split = false; this.hunters = new Map(); this.t = simTime; const el = $('note'); if (el) { el.classList.remove('show'); el.textContent = ''; } },
   watch(){
-    if (P.notes === false || saverOn || !stats.valid || simTime - this.t < 6) return;
+    if (!P.notes || saverOn || !stats.valid || simTime - this.t < 6) return;
     const bird = P.species === 'bird', one = bird ? 'flock' : 'school';
     // hunters arriving, attacking and leaving
     const seen = new Map();
@@ -3187,8 +3186,8 @@ const notes = {
     this.hunters = seen;
     if (bird) {
       // a turn sweeping the flock
-      const w = stats.wave;
-      if (w && (!this.wave || this.wave.code !== w.code || w.t0 > this.wave.t0 + 1)) {
+      const w = turn.code >= 0 ? turn : null;
+      if (w && (!this.wave || this.wave.t0 !== w.t0)) {
         const mag = Math.floor(w.code / 64), ang = (w.code - mag * 64) / 64 * 2 * Math.PI, side = Math.cos(ang) > 0.5 ? ' to the right' : Math.cos(ang) < -0.5 ? ' to the left' : Math.sin(ang) > 0 ? ', climbing' : ', dropping';
         if (mag >= 5) note('The whole flock wheels round' + side + ', a turn passed bird to bird');
         else if (mag >= 2) note('A turn sweeps through the flock' + side);
