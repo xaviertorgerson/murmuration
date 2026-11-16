@@ -69,6 +69,7 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--line);border-radiu
 .saverow button,.btnrow button,.pinnote button{font:500 12px/1 var(--font-body);color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;white-space:nowrap}
 .saverow button:hover,.btnrow button:hover,.pinnote button:hover{background:rgba(255,255,255,.12)}
 .btnrow{margin-top:8px}.btnrow button{flex:1}
+.btnrow.again{margin:10px 0 16px}.btnrow.again button{padding:10px 10px;font-weight:600}
 .pinnote{font-size:11.5px;color:var(--ink-dim);margin:0 2px 12px;line-height:1.5}.pinnote button{padding:4px 8px;margin-left:4px}
 .row.pinned .lbl::after,.row.pinned .tog .lbl::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .saver-exit{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:9;font:500 13px/1 var(--font-body);color:var(--ink);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:11px 18px;cursor:pointer;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
@@ -189,20 +190,43 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
 
 <aside class="panel" id="panel" aria-label="Simulation settings">
   <div class="seg species" id="speciesSeg" role="radiogroup" aria-label="Species"><button type="button" role="radio" data-sp="bird">Starlings</button><button type="button" role="radio" data-sp="fish">Fish</button></div>
-  <h2>Scenes</h2>
+  <h2>Scene</h2>
   <div class="chips" id="chips"></div>
   <div class="ctrls picks">
     <div class="row"><div class="lab"><label for="placeSel">Place</label></div><select id="placeSel"></select></div>
     <div class="row"><div class="lab"><label for="behaveSel">Behaviour</label></div><select id="behaveSel"></select></div>
   </div>
-  <div class="saverow"><input id="saveName" type="text" maxlength="28" placeholder="Name this scene" aria-label="Name for this scene"><button id="saveBtn" type="button">Save</button><button id="linkBtn" type="button">Copy link</button></div>
+  <div class="btnrow again"><button id="resetBtn" type="button" title="A new seed: another flock, another evening (R)">New flock</button><button id="skyBtn" type="button" title="The same flock under another sky (N)">New sky</button></div>
+  <h2 id="flockHead">The flock</h2>
+  <div class="ctrls quick" id="gPlay"></div>
   <p class="pinnote" id="pinNote" hidden><span id="pinCount"></span> <button type="button" id="unpinBtn">Reset them</button></p>
+  <h2>Watching</h2>
   <div class="ctrls quick" id="gQuick"></div>
   <details><summary>Fine tuning</summary>
+    <div class="ctrls" id="gMore"></div>
     <div class="sub">Flock</div><div class="ctrls" id="gFlock"></div>
     <div class="sub">Hunter and startles</div><div class="ctrls" id="gHunter"></div>
     <div class="sub" id="airLabel">Air</div><div class="ctrls" id="gAir"></div>
     <div class="sub">Light and color</div><div class="ctrls" id="gLook"></div>
+  </details>
+  <details><summary>Save and share</summary>
+    <div class="howto">
+      <div class="saverow"><input id="saveName" type="text" maxlength="28" placeholder="Name this scene" aria-label="Name for this scene"><button id="saveBtn" type="button">Save</button><button id="linkBtn" type="button">Copy link</button></div>
+      <p>Save keeps this scene, its seed and the levers you moved in this browser, as a button beside the built-in scenes. The link carries the same to anyone.</p>
+    </div>
+  </details>
+  <details id="saverBox"><summary>Screensaver</summary>
+    <div class="howto">
+      <div class="seg" id="saverSeg" role="radiogroup" aria-label="What the screensaver shows"><button type="button" role="radio" data-v="hold">Hold this scene</button><button type="button" role="radio" data-v="cycle">Cycle scenes</button></div>
+      <div class="btnrow"><button id="saverBtn" type="button">Start screensaver</button><button id="saverLinkBtn" type="button">Copy its link</button></div>
+      <p>Hides every control and fills the screen. Press <kbd>Esc</kbd>, or click and choose Exit, to come back. Its link opens straight into it.</p>
+    </div>
+  </details>
+  <details><summary>Settings</summary>
+    <div class="ctrls" id="gApp"></div>
+  </details>
+  <details id="perfBox"><summary>Performance</summary>
+    <div class="howto perf" id="perf"></div>
   </details>
   <details><summary>How to play</summary>
     <div class="howto">
@@ -225,20 +249,8 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
       <p>Made by <a href="https://xlt.pw" target="_blank" rel="noopener">Xavier Torgerson</a>. The <a href="https://github.com/xaviertorgerson/murmuration" target="_blank" rel="noopener">source is on GitHub</a> under the MIT licence.</p>
     </div>
   </details>
-  <details id="saverBox" open><summary>Screensaver</summary>
-    <div class="howto">
-      <div class="seg" id="saverSeg" role="radiogroup" aria-label="What the screensaver shows"><button type="button" role="radio" data-v="hold">Hold this scene</button><button type="button" role="radio" data-v="cycle">Cycle scenes</button></div>
-      <div class="btnrow"><button id="saverBtn" type="button">Start screensaver</button><button id="saverLinkBtn" type="button">Copy its link</button></div>
-      <p>Hides every control and fills the screen. Press <kbd>Esc</kbd>, or click and choose Exit, to come back. Its link opens straight into it.</p>
-    </div>
-  </details>
-  <details id="perfBox"><summary>Performance</summary>
-    <div class="howto perf" id="perf"></div>
-  </details>
   <div class="foot">
     <button id="pauseBtn" type="button">Pause</button>
-    <button id="resetBtn" type="button" title="A new seed: new flock, sky and hunters">Reseed</button>
-    <button id="skyBtn" type="button">New sky</button>
     <button id="fsBtn" type="button">Full screen</button>
     <span class="fps" id="fpsBtn" role="button" tabindex="0" title="Show performance details"><span id="seedLbl"></span> · <span id="fps">– fps</span></span>
   </div>
@@ -976,7 +988,7 @@ vec3 skyline(vec3 d, vec3 c, float camY, bool ground, float aa){
       float pool = smoothstep(0.57, 0.61, fbm(wp * 0.011));
       float chan = 1.0 - smoothstep(0.010, 0.026, abs(fbm(wp * 0.0042 + 9.0) - 0.5));
       float wet = max(pool, chan * 0.9) * see;
-      vec3 water = skyGrad(vec3(d.x, max(-d.y, 0.02), d.z)) * (0.1 + 0.9 * pow(1.0 - clamp(-d.y, 0.0, 1.0), 4.0)) + vec3(0.002, 0.003, 0.004);
+      vec3 water = skyGrad(vec3(d.x, max(-d.y, 0.02), d.z)) * (0.07 + 0.58 * pow(1.0 - clamp(-d.y, 0.0, 1.0), 4.0)) + vec3(0.002, 0.003, 0.004);
       vec3 land = gcol * (1.0 + see * (1.4 * fbm(wp * 0.06) - 0.5));
       c = mix(c, mix(land, water, wet) + hz * 0.06 * exp(min(el - horizon, 0.0) * 18.0), below);
       c = mix(c, mistCol * 0.8, uMist * 0.45 * below * exp(-abs(el - horizon) * 60.0));
@@ -1180,7 +1192,7 @@ vec3 underwater(vec3 d, out float hitT){
   vec3 qd = d - L * dot(d, L);
   vec2 a2 = normalize(vec2(qd.x, qd.z) + 1e-5);
   float shaft = fbm(a2 * 3.2 + vec2(uTime * 0.02, 1.3)) * fbm(a2 * 7.5 - vec2(1.7, uTime * 0.015));
-  c += uLightCol * shaft * shaft * 0.5 * smoothstep(-0.25, 1.0, dot(d, L)) * uShaftAmt;
+  c += uLightCol * shaft * shaft * 0.5 * max(smoothstep(-0.25, 1.0, dot(d, L)), 0.3 * smoothstep(-0.5, 0.05, d.y)) * uShaftAmt;
   return c;
 }
 void main(){
@@ -1408,7 +1420,7 @@ void main(){
   vec3 col = alb * (sun * max((ndl + 0.25) / 1.25, 0.0) + amb);
   // light through the wing feathers when the bird is between you and the sun
   float mu = max(dot(V, L), 0.0);
-  col += uSunCol * vec3(1.0, 0.72, 0.45) * pow(mu, 22.0) * vThin * (0.3 + 0.7 * max(-ndl, 0.0)) * uSunVis * lit * 0.35 * (1.0 - 0.7 * vNear);
+  col += uSunCol * vec3(1.0, 0.72, 0.45) * pow(mu, 22.0) * vThin * (0.3 + 0.7 * max(-ndl, 0.0)) * uSunVis * lit * 0.35;
   // glossy, oil-slick sheen on the plumage
   vec3 hv = L - V; float hl = length(hv);
   vec3 H = hv / max(hl, 1e-3);
@@ -1423,15 +1435,14 @@ void main(){
   col += sun * sp * mix(vec3(1.0), irid, 0.8) * 0.16 * uSheen * gloss;
   // the same gloss lit by the whole sky, not only the sun: a broad sheen that shows up close and when the bird banks
   float broad = pow(max(dot(N, H), 0.0), 5.0) * max(ndl + 0.2, 0.0);
-  col += irid * (sun * broad * 0.035 + skyGrad(reflect(V, N)) * (0.007 + 0.028 * pow(1.0 - abs(ndv), 3.0)) * (0.4 + 0.6 * vAmb)) * uSheen * gloss * (0.5 + 1.0 * vNear);
+  col += irid * (sun * broad * 0.035 + skyGrad(reflect(V, N)) * (0.007 + 0.028 * pow(1.0 - abs(ndv), 3.0)) * (0.4 + 0.6 * vAmb)) * uSheen * gloss * 0.7;
   // winter plumage: pale tips to the body feathers, seen only up close
   if (uPred == 0 && vNear > 0.01) col = mix(col, (vec3(0.82, 0.76, 0.62) * (sun * max((ndl + 0.3) / 1.3, 0.0) + amb)) * 0.55, spot(vLoc * 86.0) * body * vNear * 0.45);
   // glossy feathers mirror the bright sky as birds tilt, so banking sends flashes of light through the flock (as the fish do)
   vec3 Rr = reflect(V, N);
   float fr = 0.04 + 0.96 * pow(1.0 - abs(ndv), 5.0);
-  // (a far bird is a few pixels and may flash like a mirror; a near one is a black bird with a gloss on it)
-  col += skyGrad(Rr) * fr * (0.16 + 0.24 * vThin) * uSheen * (0.4 + 0.6 * vAmb) * (1.0 - 0.9 * vNear);
-  col += uSunCol * uSunVis * lit * pow(max(dot(Rr, L), 0.0), 36.0) * (0.25 + 0.45 * vThin) * uSheen * (1.0 - 0.5 * vNear);
+  col += skyGrad(Rr) * fr * (0.16 + 0.24 * vThin) * uSheen * (0.4 + 0.6 * vAmb);
+  col += uSunCol * uSunVis * lit * pow(max(dot(Rr, L), 0.0), 36.0) * (0.25 + 0.45 * vThin) * uSheen;
   col *= mix(0.3, 1.0, smoothstep(0.25, 0.95, vAlpha));
   col = mix(col, skyGrad(V), 1.0 - exp(-dist * uHaze));
   float a = vAlpha * uReflK;
@@ -1781,7 +1792,7 @@ const BASE = {
          speedMatch: 0.55, posSense: 1, initiate: 0.8, sheet: 0,
          cursor: 'hunt', fear: 1, panic: 1, ripples: 1.5, wave: 1, visitors: 1, indiv: 0.8, showHunter: true,
          wind: 0.45, turbulence: 0.5, drift: 0.2, wander: 0.6,
-         tod: 0.45, sunMoves: true, clouds: 0.5, mist: 0, ink: '#2c4a5e', exposure: 1.05, bloom: 0.9, shafts: 1, haze: 0.6, grain: 0.12, shadow: 1, sheen: 1, detail: true},
+         tod: 0.45, sunMoves: true, clouds: 0.5, mist: 0, ink: '#2c4a5e', exposure: 1.05, bloom: 0.9, shafts: 1.2, haze: 0.6, grain: 0.12, shadow: 1, sheen: 1, detail: true},
 };
 /* A scene is three independent choices: a species, a place (the backdrop and its light) and a behaviour (how the flock flies).
    The built-in scenes are named combinations of the three; `p` on a scene is anything it sets beyond its place and behaviour.
@@ -2654,14 +2665,15 @@ function setSkyUniforms(){
   u3f('uSunDir', sun); u3f('uSunCol', pal.S); u3f('uGlow', pal.G); u3f('uZenith', pal.Z); u3f('uHorizon', pal.H); u3f('uBelt', pal.B);
   return sun;
 }
-const LIGHT_DIR = V3.norm([0.25, 1.0, -0.4]);
-/* Under water the sun moves too (Let the sun move): it swings across the surface and climbs and sinks over a few minutes, so
-   the shafts lean and sweep, the shadows inside the school shift and the water warms a little while it is low. */
+/* The sun under water. Refraction at the surface squeezes it toward the vertical: however low it is in the sky, under
+   water it stands between about 42 and 90 degrees up. It is kept low in that range and a little ahead of where you first
+   look, because that is what puts the columns of light in the picture: the shafts fan down from just above the frame.
+   With Let the sun move it sways slowly about that place, so the columns lean and sweep and the shadows in the school shift. */
+const WATER_SUN = {az: 0.45, el: 0.82, swayAz: 0.3, swayEl: 0.07};
 let lightT = 0;
 function waterLight(){
-  if (!P.sunMoves) return {dir: LIGHT_DIR, warm: 0};
-  const a = lightT * 2 * Math.PI / 250, az = 0.56 + 0.95 * Math.sin(a), el = 1.02 + 0.3 * Math.cos(a * 0.63 + 0.8);
-  return {dir: [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)], warm: Math.max(0, Math.min(1, (1.0 - el) / 0.28))};
+  const a = P.sunMoves ? lightT * 2 * Math.PI / 250 : 0, az = WATER_SUN.az + (P.sunMoves ? WATER_SUN.swayAz * Math.sin(a) : 0), el = WATER_SUN.el + (P.sunMoves ? WATER_SUN.swayEl * Math.cos(a * 0.63 + 0.8) : 0);
+  return {dir: [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)]};
 }
 
 /* flock light map: how much of the flock lies between each bird and the sun (or the bright surface above the fish) */
@@ -2694,7 +2706,7 @@ function render(){
   pal = skyPalette(sunEl(P.tod));
   const W = canvas.width, H = canvas.height;
   const pxScale = H / (2 * Math.tan(cam.fov / 2));
-  const wTop = sky ? null : lin(sc.top), wDeep = sky ? null : lin(sc.deep), wl = sky ? null : waterLight(), lightCol = sky ? null : V3.mul(lin(sc.light).map((c, i) => c * (1 - wl.warm * [0, 0.12, 0.3][i])), 1 - 0.12 * wl.warm);
+  const wTop = sky ? null : lin(sc.top), wDeep = sky ? null : lin(sc.deep), wl = sky ? null : waterLight(), lightCol = sky ? null : lin(sc.light);
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, RT.msFBO); gl.viewport(0, 0, W, H);
   gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -2847,12 +2859,13 @@ function newSky(keepTime){
     const B = Object.assign({}, BASE[P.species], preset.p), j = (a, b) => a + (b - a) * rng();
     P.bloom = B.bloom * j(0.8, 1.25); P.haze = B.haze * j(0.75, 1.3); P.shafts = B.shafts * j(0.75, 1.25);
     P.mist = B.mist * j(0.5, 1.4); P.wind = B.wind * j(0.65, 1.4); P.exposure = B.exposure * j(0.93, 1.08);
-    if (P.species === 'bird') P.clouds = Math.max(0, Math.min(1, B.clouds + (rng() - 0.5) * 0.45));
+    if (P.species === 'bird') P.clouds = Math.max(0, Math.min(1, B.clouds + (rng() - 0.5) * 0.3));
     look.homeK = j(0.8, 1.25);
   }
   cloudT = rng() * 600; lightT = rng() * 250;
-  P.sunAz = (rng() - 0.5) * 0.9;
-  if (!keepTime && P.species === 'bird' && preset.p.tod != null) P.tod = Math.max(0.05, Math.min(0.97, preset.p.tod + (rng() - 0.5) * (preset.own.tod != null ? 0.08 : 0.24)));
+  // the sun starts inside the picture, however narrow the screen
+  { const hf = Math.atan(Math.tan(25 * Math.PI / 180) * Math.max(0.4, canvas.width / Math.max(1, canvas.height))); P.sunAz = 0.14 + (rng() - 0.5) * 2 * Math.min(0.45, 0.75 * hf); }
+  if (!keepTime && P.species === 'bird' && preset.p.tod != null) P.tod = Math.max(0.05, Math.min(0.97, preset.p.tod + (rng() - 0.5) * (preset.own.tod != null ? 0.08 : 0.14)));
 }
 
 /* =====================================================================
@@ -2866,34 +2879,33 @@ function onView(v){
 const VIEWS = ['orbit', 'ground', 'ride'];
 /* Controls. Quick ones sit at the top with a plain description; the rest live under Fine tuning, each with an info note. */
 const CTRL = [
+  {g: 'gPlay', k: 'tight', label: 'Tightness', min: 0, max: 1, step: 0.01, ends: ['Loose', 'Tight'], macro: true,
+   desc: 'How closely they pack, and how hard stray birds pull back into the swarm.'},
+  {g: 'gPlay', k: 'energy', label: 'Restlessness', min: 0, max: 1, step: 0.01, ends: ['Calm', 'Restless'], macro: true,
+   desc: 'Calm gives long, smooth sweeps. Restless gives flares at the edges, startles and quick turns.'},
+  {g: 'gPlay', k: 'sheet', label: 'Shape', min: 0, max: 1, step: 0.01, ends: ['A ball', 'A thin slab'], only: 'bird',
+   desc: 'Real flocks are slabs about three times as wide as they are thick, level in straight flight and tilting through turns.'},
+  {g: 'gPlay', k: 'count', label: 'Flock size', type: 'select', options: [4096, 8192, 16384, 32768, 65536],
+   desc: 'The typical size. Each seed varies it a little, as real flocks vary. Lower it if the motion stutters.'},
+  {g: 'gPlay', k: 'visitors', label: 'Wild hunters', min: 0, max: 3, step: 1, f: (v) => (+v === 0 ? 'none' : String(v)),
+   desc: 'How many wild hunters may be about at once. They arrive now and then, hunt for a while and leave: falcons and hawks for starlings, sharks and tuna for fish.'},
   {g: 'gQuick', k: 'view', label: 'View', type: 'seg', options: [['orbit', 'Orbit'], ['ground', 'From the ground'], ['ride', 'Ride along']], on: onView,
    desc: 'Orbit: circle the swarm (drag to circle, scroll to come closer). From the ground: stand near the roost as the flock comes and goes. Ride along: fly behind one bird.'},
   {g: 'gQuick', k: 'camDrift', label: 'Camera drifts slowly around', type: 'toggle'},
-  {g: 'gQuick', k: 'visitors', label: 'Wild hunters', min: 0, max: 3, step: 1, f: (v) => (+v === 0 ? 'none' : String(v)),
-   desc: 'How many wild hunters may be about at once. They arrive now and then, hunt for a while and leave: falcons and hawks for starlings, sharks and tuna for fish.'},
-  {g: 'gQuick', k: 'indiv', label: 'Individuality', min: 0, max: 1, step: 0.01, ends: ['All alike', 'Each its own'],
-   desc: 'How different each bird is in size, pace, boldness and how closely it follows others. A little difference makes the swarm less mechanical.'},
-  {g: 'gQuick', k: 'count', label: 'Flock size', type: 'select', options: [4096, 8192, 16384, 32768, 65536],
-   desc: 'The typical size. Each seed varies it a little, as real flocks vary. Lower it if the motion stutters.'},
-  {g: 'gQuick', k: 'tight', label: 'Tightness', min: 0, max: 1, step: 0.01, ends: ['Loose', 'Tight'], macro: true,
-   desc: 'How closely they pack, and how hard stray birds pull back into the swarm.'},
-  {g: 'gQuick', k: 'energy', label: 'Restlessness', min: 0, max: 1, step: 0.01, ends: ['Calm', 'Restless'], macro: true,
-   desc: 'Calm gives long, smooth sweeps. Restless gives flares at the edges, startles and quick turns.'},
-  {g: 'gQuick', k: 'sheet', label: 'Shape', min: 0, max: 1, step: 0.01, ends: ['A ball', 'A thin slab'], only: 'bird',
-   desc: 'Real flocks are slabs about three times as wide as they are thick, level in straight flight and tilting through turns.'},
-  {g: 'gQuick', k: 'variety', label: 'Seed variety', min: 0, max: 1, step: 0.01, ends: ['Same flight, new weather', 'A different flock'],
-   desc: 'How much a new seed changes the way the flock flies. Each lever is drawn from a bell curve around the scene’s own value and clipped to a safe range. Levers you have moved stay where you put them.'},
-  {g: 'gQuick', k: 'speed', label: 'Speed', min: 0.6, max: 1.6, step: 0.01,
-   desc: 'Cruising pace. Birds still surge and ease off around it.'},
   {g: 'gQuick', k: 'tod', label: 'Time of day', min: 0, max: 1, step: 0.005, only: 'bird', f: (v) => { const e = sunEl(+v); return 'sun ' + (e >= 0 ? '+' : '−') + Math.abs(e).toFixed(0) + '°'; },
    desc: 'Where the sun sits, from late afternoon to after dark.'},
   {g: 'gQuick', k: 'sunMoves', label: 'Let the sun move', type: 'toggle', info: 'Over a few minutes the sun sets and comes back up, or under water swings across the surface, so the light keeps changing.'},
-  {g: 'gQuick', k: 'notes', label: 'Field notes', type: 'toggle', global: true, info: 'A quiet line under the title that names what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.'},
-  {g: 'gQuick', k: 'tour', label: 'Drift to new scenes when idle', type: 'toggle', global: true,
+  {g: 'gMore', k: 'indiv', label: 'Individuality', min: 0, max: 1, step: 0.01, ends: ['All alike', 'Each its own'],
+   desc: 'How different each bird is in size, pace, boldness and how closely it follows others. A little difference makes the swarm less mechanical.'},
+  {g: 'gMore', k: 'speed', label: 'Speed', min: 0.6, max: 1.6, step: 0.01,
+   desc: 'Cruising pace. Birds still surge and ease off around it.'},
+  {g: 'gMore', k: 'variety', label: 'Seed variety', min: 0, max: 1, step: 0.01, ends: ['Same flight, new weather', 'A different flock'],
+   desc: 'How much a new seed changes the way the flock flies. Each lever is drawn from a bell curve around the scene’s own value and clipped to a safe range. Levers you have moved stay where you put them.'},
+  {g: 'gApp', k: 'notes', label: 'Field notes', type: 'toggle', global: true, info: 'A quiet line under the title that names what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.'},
+  {g: 'gApp', k: 'tour', label: 'Drift to new scenes when idle', type: 'toggle', global: true,
    desc: 'After two quiet minutes it fades to a freshly generated scene every few minutes, like a screensaver: a new seed and any pairing of place and behaviour, starlings or fish. A scene you have adjusted or saved is given six minutes, and Back returns to it.'},
-  {g: 'gQuick', k: 'power', label: 'Power use', type: 'seg', options: [['eco', 'Eco'], ['balanced', 'Balanced'], ['high', 'High']], global: true, on: setPower,
+  {g: 'gApp', k: 'power', label: 'Power use', type: 'seg', options: [['eco', 'Eco'], ['balanced', 'Balanced'], ['high', 'High']], global: true, on: setPower,
    desc: 'Eco runs at 30 frames a second with fewer birds, gentle on the GPU. High uses full resolution and the most birds.'},
-
   {g: 'gFlock', k: 'size', label: 'Bird size', min: 0.6, max: 2.2, step: 0.05, info: 'How big each bird is drawn. It does not change how they fly.'},
   {g: 'gFlock', k: 'speedMatch', label: 'Speed matching', min: 0.2, max: 0.9, step: 0.01, info: 'How much each bird copies its neighbours’ pace. Higher values send surges and slow-downs rolling through the flock.'},
   {g: 'gFlock', k: 'posSense', label: 'Catch up and ease off', min: 0, max: 1.6, step: 0.01, info: 'Birds that fall behind speed up, birds out in front ease off, and birds closing on the one ahead brake.'},
@@ -2952,8 +2964,9 @@ function buildUI(){
   for (const c of CTRL) {
     const row = document.createElement('div'); row.className = 'row'; row.dataset.k = c.k;
     const id = 'c-' + c.k;
-    const infoBtn = c.info ? `<button type="button" class="i" aria-label="About ${c.label}" aria-expanded="false" aria-controls="${id}-i">i</button>` : '';
-    const note = c.desc ? `<p class="desc">${c.desc}</p>` : c.info ? `<p class="info" id="${id}-i" hidden>${c.info}</p>` : '';
+    const about = c.info || c.desc;
+    const infoBtn = about ? `<button type="button" class="i" aria-label="About ${c.label}" aria-expanded="false" aria-controls="${id}-i">i</button>` : '';
+    const note = about ? `<p class="info" id="${id}-i" hidden>${about}</p>` : '';
     if (c.type === 'toggle') {
       row.innerHTML = `<div class="lab"><label class="tog" for="${id}"><span class="lbl">${c.label}</span><input type="checkbox" id="${id}"></label>${infoBtn}</div>${note}`;
       const el = row.querySelector('input'); el.addEventListener('change', () => { P[c.k] = el.checked; pin(c.k, el.checked); }); inputs[c.k] = el;
@@ -2999,7 +3012,7 @@ function syncUI(){
     else if (c.type === 'color') el.value = P[c.k];
     else { const [lo, hi] = lim(c); el.min = Math.min(lo, P[c.k]); el.max = Math.max(hi, P[c.k]); el.value = P[c.k]; const out = row.querySelector('output'); if (out) out.textContent = (c.f || fmt2)(P[c.k]); setFill(el); }
   }
-  $('airLabel').textContent = fish ? 'Water' : 'Air';
+  $('airLabel').textContent = fish ? 'Water' : 'Air'; $('flockHead').textContent = fish ? 'The school' : 'The flock'; $('resetBtn').textContent = fish ? 'New school' : 'New flock';
   renderChips();
   document.documentElement.style.setProperty('--accent', SCENES[preset.scene].accent);
   $('subtitle').textContent = preset.name + ' · ' + count.toLocaleString('en-US') + ' ' + SP[P.species].noun;
@@ -3096,8 +3109,9 @@ function applyScene(sc, live){
   else { todDir = 1; newSky(); }
   drawLevers();
   if (!live) {
-    // the seed chooses where you stand: off to either side of the light, a little higher or lower
-    cam.yaw = cam.syaw = 0.15 + (rng() - 0.5) * 2.4; cam.pitch = cam.spitch = (sc.pitch != null ? sc.pitch : sc.species === 'bird' ? -0.4 : -0.1) + (rng() - 0.5) * (sc.species === 'bird' ? 0.3 : 0.16);
+    // a new flock is always met facing the light: the sunset and its clouds behind the birds, or the shafts coming down
+    // through the water. (The seed moves the sun along the horizon and changes the sky, not where you stand.)
+    cam.yaw = cam.syaw = 0.15 + (rng() - 0.5) * 0.24; cam.pitch = cam.spitch = sc.pitch != null ? sc.pitch : sc.species === 'bird' ? -0.4 : -0.1;
     cam.u = cam.su = sc.u != null ? sc.u : sc.species === 'bird' ? 0 : 0.17; cam.zoom = cam.szoom = 1; follow.hunter = null;
     if (P.varyCount !== false) { const want = drawCount(); if (!S || S.N !== want) { count = want; allocSim(count); } }
     if (!S) allocSim(count);
@@ -3785,7 +3799,7 @@ function dump(){
   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
   return out;
 }
-window.__murmur = {turn, get light(){ return lightT; }, set light(v){ lightT = v; }, get spacing(){ return SP[P.species].spacing * spaceK(); }, get R0(){ const sp = SP[P.species]; return Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5)); }, get stats(){ return stats; }, get P(){ return P; }, applyPreset, setCount, advance, dump, onView, applyMacros, frameStep, hunters, reseed, releaseHunter(kind, k){ for (let i = 0; i < (k || 1); i++) { const h = makeHunter(kind, V3.add(stats.main, [60 + i * 8, P.species === 'bird' ? 40 : 2, 30]), false); h.state = 'hunt'; h.vis = 1; if (P.species === 'fish') h.p = V3.add(stats.main, [14 + i * 3, 1, 8]); else if (kind === 'peregrine') { const R = Math.max(stats.mainR || stats.spread, 6); h.p = V3.add(stats.main, [R * 1.7, R * 0.9 + 30, 0]); h.ang = 0; } wild.push(h); } }, startleFlock(){ click.p = V3.add(stats.main, [stats.mainR * 0.3, 0, 0]); click.t = simTime; if (P.cursor === 'hunt') startStoop(click.p); }, startleAt(x, y){ pointer.x = x; pointer.y = y; pointerRay(); click.p = pointer.world.slice(); click.t = simTime; if (P.cursor === 'hunt') startStoop(pointer.world); }, get pred(){ return pred; }, get fps(){ return fps; }, get cam(){ return cam; }, get follow(){ return follow; }, get auto(){ return AUTO; }, get gpu(){ return gpuName; }, trimFlock, perfText,
+window.__murmur = {turn, waterSun: WATER_SUN, get light(){ return lightT; }, set light(v){ lightT = v; }, get spacing(){ return SP[P.species].spacing * spaceK(); }, get R0(){ const sp = SP[P.species]; return Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5)); }, get stats(){ return stats; }, get P(){ return P; }, applyPreset, setCount, advance, dump, onView, applyMacros, frameStep, hunters, reseed, releaseHunter(kind, k){ for (let i = 0; i < (k || 1); i++) { const h = makeHunter(kind, V3.add(stats.main, [60 + i * 8, P.species === 'bird' ? 40 : 2, 30]), false); h.state = 'hunt'; h.vis = 1; if (P.species === 'fish') h.p = V3.add(stats.main, [14 + i * 3, 1, 8]); else if (kind === 'peregrine') { const R = Math.max(stats.mainR || stats.spread, 6); h.p = V3.add(stats.main, [R * 1.7, R * 0.9 + 30, 0]); h.ang = 0; } wild.push(h); } }, startleFlock(){ click.p = V3.add(stats.main, [stats.mainR * 0.3, 0, 0]); click.t = simTime; if (P.cursor === 'hunt') startStoop(click.p); }, startleAt(x, y){ pointer.x = x; pointer.y = y; pointerRay(); click.p = pointer.world.slice(); click.t = simTime; if (P.cursor === 'hunt') startStoop(pointer.world); }, get pred(){ return pred; }, get fps(){ return fps; }, get cam(){ return cam; }, get follow(){ return follow; }, get auto(){ return AUTO; }, get gpu(){ return gpuName; }, trimFlock, perfText,
   get scene(){ return preset; }, get pins(){ return pins; }, get saver(){ return {on: saverOn, cycle: saverCycle}; }, get seed(){ return seedVal; }, get held(){ return toolHeld(); },
   stateQuery, parseState, applyState, pickScene, sceneFor, setSaver, relever, setVariety(v){ varietyUser[preset.species] = v; relever(); }};
 })();

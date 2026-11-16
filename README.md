@@ -49,7 +49,11 @@ it, so it sweeps from side to side in front of you.
 
 ## Scenes, seeds and links
 
-**Tune** (top right) holds everything else.
+**Tune** (top right) holds everything else, in the order you reach for it: the **scene** (starlings or
+fish, a built-in scene or your own pairing of place and behaviour, *New flock* and *New sky*), **the
+flock** (Tightness, Restlessness, Shape, its size and how many wild hunters may come), and **watching**
+(the view, the drifting camera, the hour and whether the sun moves). Everything finer is folded away
+below, and each control explains itself behind its (i).
 
 - **A scene is three choices:** the species (starlings or fish), the place and the behaviour. Starlings
   have reed beds, a still lake, open sea, mountains and desert, and fly an evening roost, a wide veil, a
@@ -61,13 +65,14 @@ it, so it sweeps from side to side in front of you.
 - **Shape** runs from a ball to a thin slab. **Field notes**, off until you turn it on, is a quiet line
   under the title that names what is happening as it happens: a turn sweeping the flock, a falcon
   arriving, the flock balling up.
-- **A seed** is a different evening. It draws the individuals, where you stand, the hour and the sky, the
-  flock's size and the hunters' visits, and it moves the flight itself: Tightness and Restlessness land
+- **A seed** is a different evening. It draws the individuals, the hour and the sky, where the sun
+  stands, the flock's size and the hunters' visits, and it moves the flight itself: Tightness and Restlessness land
   anywhere within a quarter of their scale either side of where the behaviour sets them, and alignment,
   roaming, pace, fear and escape strength are drawn around the scene's values. *Seed variety* sets how
   far a seed may go; at zero only the weather changes. Fish are moved less.
-- **Let the sun move** is on. Over a few minutes the sun sets and comes back up; under water it swings
-  across the surface, so the shafts lean and sweep and the light warms and cools.
+- **Let the sun move** is on. Over a few minutes the sun sets and comes back up; under water it sways,
+  so the columns of light lean and sweep. A new flock is always met facing the light: the sunset and
+  its clouds behind the birds, or the shafts coming down through the water.
 - **A lever you move stays where you put it** through a reseed, and is marked with a dot. *Reset them*
   hands those levers back to the scene and the seed.
 - **Left alone**, the page moves on by itself after two minutes: a new seed and any pairing of place and
@@ -177,12 +182,22 @@ back to the nearest part of the flock without overshooting, and a hunter is an e
 
 | Starlings, page defaults | Before | Timed turns only | Now |
 |---|---|---|---|
-| Runs | 1 (12,288 birds, 3.5 minutes) | 3 (12,032 to 19,968 birds, 3 minutes) | 8, across the seven built-in scenes (9,984 to 49,152 birds, 3 minutes) |
-| Time with under 90% of the birds in one body | in 12 of 21 ten-second stretches | 21%, 20% and 10% of samples | none, sampled every two seconds |
+| Runs | 1 (12,288 birds, 3.5 minutes) | 3 (12,032 to 19,968 birds, 3 minutes) | 12, across the seven built-in scenes (9,984 to 49,152 birds, 2 to 3 minutes) |
+| Time with under 90% of the birds in one body | in 12 of 21 ten-second stretches | 21%, 20% and 10% of samples | none in nine runs; 2%, 3% and 7% in three, each a moment that closed within ten seconds |
 
-In those eight runs the seeds had put Tightness between 0.20 and 0.68 and Restlessness between 0.33 and
-0.80. With a peregrine released on the flock at once, one to three dives landed in half a minute, and in
+In the first eight of those runs the seeds had put Tightness between 0.20 and 0.68 and Restlessness
+between 0.33 and 0.80. With a peregrine released on the flock at once, one to three dives landed in half a minute, and in
 one run of three the flock parted (62% in the larger body at the worst).
+
+**Against the first release.** The page as first published was flown the same way, under its own
+defaults: its starlings were in two or more bodies 85%, 70% and 80% of the time (three two-minute runs,
+up to five bodies at once), and its fish were whole. Its sky, water and light were compared scene by
+scene with this one. The sky, water and post-processing shaders are the same code with additions (the
+marsh, the dunes, the kelp and coral, colour in the gloss). Three later changes had cost the picture and
+were undone: up close the birds' reflection of the sky and sun had been turned down, which took the warm
+light off the swarm; a seed chose where you stood, which put the sunset out of frame; and the underwater
+sun swung so widely that the columns of light came and went. The underwater sun now stands low and
+ahead, where the columns fall into the picture, which the first release's did not reliably do either.
 
 **Shape.** Three default runs, hunter included, against field measurements of small flocks:
 
@@ -221,11 +236,13 @@ lever were flown for a minute, for starlings and for fish (92 runs). That sweep 
 were rewritten and with the hunters off, and has not been repeated; four starling sliders were shortened
 by it (Personal space, Pull at the edges, Wind, Escape strength) and none for fish.
 
-**Fish.** With the defaults, hunters included, seven one-minute runs over the five built-in scenes:
-neighbours 0.6 to 0.7 m apart in a travelling school (about a body length) and 0.5 m in a bait ball; a
-travelling school was in more than one body 0 to 12% of the time, dividing and rejoining as schools do;
-the ring and the ball never divided. The fish's own rules have not been changed by any of the work on
-starlings' turns; a seed now moves a school's Tightness and Restlessness a little (0.35 to 0.65).
+**Fish.** With the defaults, hunters included, over the five built-in scenes: neighbours 0.6 to 0.7 m
+apart in a travelling school (about a body length) and 0.5 m in a bait ball; a travelling school was in
+more than one body 0 to 15% of the time, dividing and rejoining as schools do; the ring never divided.
+A bait ball is cut in two by its two hunters and can stay parted for a minute: 10%, 58% and 62% of the
+time in three runs of a hundred seconds, against 8%, 40% and 56% for the first release, so that is as it
+was. The fish's own rules have not been changed by any of the work on starlings' turns; a seed now moves
+a school's Tightness and Restlessness a little (0.35 to 0.65).
 
 [`docs/NOTES.md`](docs/NOTES.md) records what went wrong at each step and why, and how to repeat the
 measurements.

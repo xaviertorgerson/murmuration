@@ -108,6 +108,28 @@ turns) and `c` 20 (a slower wave): no gain in change, a little more division. Wh
 everything that pulls toward its middle; arms and bays need those pulls to tolerate a shape, not a faster
 turn. That is the next thing to earn.
 
+## Audit against the first release (a6d395d)
+
+Both builds loaded on the same GPU and flown under their own defaults; scenes rendered side by side.
+
+| Since the first release | What the comparison showed | Verdict |
+|---|---|---|
+| The flock as a veil, timed turns, steering with the mass, coming back, the alarm band, hunters as events | First release: under 90% in one body 85%, 70%, 80% of the time, up to five bodies. Now: none in eight runs | stays |
+| Fish rules | Travelling school whole in both. A bait ball is cut in two by its hunters as often now (10 to 62% of the time) as then (8 to 56%) | stays; the parted bait ball is the next fish fault to look at |
+| Sky, water and post-processing shaders | Same code plus the marsh, dunes, kelp and coral | stays |
+| Thin-film colour in the gloss of birds and fish | Adds colour, takes no light away | stays |
+| Up close, the birds' sky reflection, sun glint and wing glow turned down ("a near bird is a black bird") | Took the warm light off the swarm, the thing the first release did best | gone: back to the first release's values, near and far |
+| A seed chooses where you stand (yaw and pitch) | Sunset and horizon out of frame in half the scenes | gone: a new flock is met facing the light; the sun starts inside the picture |
+| A wider spread of hours and clouds per seed | Daylight skies and clear skies with no sunset in them | narrowed |
+| The underwater sun swinging 55° either way | Columns of light came and went | gone |
+| The underwater sun itself (65° up in the first release) | The shafts fan from the sun's place on screen, and at 65° that is far above the frame: 16% strength in a level view | moved: about 47° up (inside what refraction allows) and ahead, swaying a little |
+| The marsh under the reed beds | Good from above; from the ride view its pools outshone the flock | stays, a third dimmer |
+| Far birds darkening as the alarm passes | Reads as the dark band | stays |
+| Detailed meshes up close, wind and current, obstacles, field notes (off), controls, camera fit, scenes, seeds, links, screensaver | No loss found | stays |
+| The menu | Fifteen controls in one list with every explanation open | regrouped: scene, the flock, watching; the rest folded; explanations behind (i) |
+
+Rule from this: before changing how something looks, render the first release beside it.
+
 ## Fish
 
 The audit that was run on starlings was run on fish (8,192 and 16,384 fish, a minute each). Neighbours are
