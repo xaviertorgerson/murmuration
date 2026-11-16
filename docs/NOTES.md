@@ -17,6 +17,9 @@ Nothing below was tuned by eye alone. `tools/flock-metrics.js` reads the simulat
   never wait on `setTimeout` inside a measurement; use `runSync`.
 - **Runs are chaotic.** The same seed gives a different run if anything upstream changes. Judge by several
   seeds and sizes, not one.
+- **Measure what the page does by default.** For a long time every number here was taken with the wild
+  hunters switched off, and the page was fine by those numbers while the flock a visitor saw was in pieces
+  half the time. Switch something off only to isolate a cause, and say so next to the number.
 - **Looking.** `__fm.strip(n, gap, cols)` draws a contact sheet over the page; a screenshot of that shows a
   minute of flight in one picture. The ground view is the photographer's view.
 - **Against film.** `tools/silhouette-metrics.js` takes the silhouette statistics that were taken from
@@ -63,18 +66,47 @@ Nothing below was tuned by eye alone. `tools/flock-metrics.js` reads the simulat
     show the roll itself. The bunching that was added earlier to darken the band is still there but is no
     longer what makes it visible; it tore the sheet when it was strong, so do not raise it.
 
+13. **A turn passed from neighbour to neighbour tears the flock.** Birds the turn reached by a roundabout
+    path, or by the fallback, began it a few tenths of a second after the birds beside them. Two birds that
+    make the same turn a time t apart end it v·t·2·sin(angle/2) apart: 0.3 s and a right angle is 4.5 m, wider
+    than the gap the relay can cross. So one big turn left two bodies side by side, and the next turn reached
+    one and not the other. Fix: the page conducts (`conductTurns`). One turn at a time, with an origin and a
+    start; a bird begins when a wave at 27 m/s from the origin reaches it. The start time is smooth across
+    the flock, so a turn shears the flock (which is where its shapes now come from) and cannot tear it. The
+    rate is fixed for the whole turn, so every bird turns through the same angle. The relay, the priority
+    rule, the fallback and the six-second memory (2 to 4 above) are gone.
+14. **A 100° turn every eight seconds.** Of the turns begun together the bigger won, so nearly every turn
+    that survived was a big one. The conductor draws the size: mostly small, one in four a right angle.
+15. **Coming back overshot.** A returning group sprinted at 1.4 times cruise until it was inside the flock
+    and went out the other side. And "outside" was a distance from the centre, which cannot tell the far
+    end of a long flock from a second body. Fix: the page marks the main body with up to 32 sampled birds
+    spread through it (farthest-point sampling); a bird further from every mark than the marks cover is
+    outside, and flies to the nearest mark at a closing speed of half the remaining gap per second, its
+    own speed included, while the flock slows for a large lost part.
+16. **A hunter nearly all the time.** A wild hunter stayed 35 to 80 s and the next came 25 to 65 s after
+    the last had arrived, so one was present two thirds of the time, attacking every 6 to 18 s whether or
+    not the flock had closed up. Over starlings now: first visit after 40 to 80 s, a visit of 22 to 40 s,
+    the next 70 to 150 s after it leaves, and no pass while under 85% of the birds are in one body.
+17. **A behaviour key used twice** (`ball`, for birds and for fish): the later silently replaced the
+    earlier and a scene flew with the other species' levers. Keys in `BEHAVES` are unique across species.
+
 ## Starlings: the target, from Søren Solkær's Black Sun photographs
 
 A veil a bird or two thick and many times wider; dark and pale are the same sheet edge-on and face-on;
 folds and dark-rimmed bulbs; dark lines where birds bunch as alarm passes; at times a tight ball; a thin
 streamer of birds catching up. The build reaches a slab about 1 : 2.5 : 5.5 that swings between sheet and
-ball, crossed by a dark band when it is startled. It does not fold over itself.
+ball, crossed by a dark band when it is startled. Since turns became timed waves a turn stretches and
+twists it (a streamer, an S, a fold seen edge-on), but it rounds off again within seconds.
 
 Against film (`tools/silhouette-metrics.js`, four clips): proportions and wholeness match; the simulated
 flock is darker (median 0.27 to 0.45 against 0.13 to 0.22), rounder in outline (area over hull 0.85 to
 0.95 against 0.69 to 0.78) and changes shape half as fast (0.13 to 0.28 of the outline a second against
 0.43 to 0.46). Restlessness at 0.75 or 1 raised the change rate only in the runs where the flock also
-divided, so the default stayed. Arms, bays and faster change are the next thing to earn.
+divided, so the default stayed. With timed turns the numbers are the same (0.16 to 0.24, area over hull
+0.90 to 0.95). Tried and not kept, two runs each through `__murmur.turn`: `gain` 1.6 and 2.2 (faster
+turns) and `c` 20 (a slower wave): no gain in change, a little more division. What rounds the flock off is
+everything that pulls toward its middle; arms and bays need those pulls to tolerate a shape, not a faster
+turn. That is the next thing to earn.
 
 ## Fish
 
@@ -100,7 +132,10 @@ before and after; exact positions will differ (the shader is recompiled), statis
   extreme, a turn toward home is at most about a right angle, and the turn wave is quicker.
 - How far a turn stretches the flock is `speed x crossing time x angle / 2`. It does not depend on the
   turn's rate. Shorten the crossing time or the angle, not the rate.
-- A seed draws the flight levers from a clipped bell curve (`VARY`). The corners were flown and are safe.
+- A seed places Tightness and Restlessness anywhere within a quarter of the scale either side of where
+  the behaviour sets them (`dial` in `BEHAVES`), and draws the other flight levers around the scene's values
+  (`VARY`, per species). The eight default runs after the timed turns covered Tightness 0.20 to 0.68 and
+  Restlessness 0.33 to 0.80 and stayed whole. A seed also chooses where you stand, the hour and the count.
 - **The sweep.** Both ends of every flight lever were flown for a simulated minute per species (92 runs).
   Starlings: 42 of 46 ends stayed one flock; the four that did not (Personal space at its minimum, Pull
   at the edges, Wind and Escape strength at their maximum) were pulled in, in `LIMIT`, and flown again. Fish: no end packed,
@@ -126,6 +161,8 @@ follows the flock's size. Zoom-out stops where a bird would fall under about a p
 
 ## Open
 
-- Folds in the veil; arms and bays in its outline; a faster change of shape (see the film comparison).
+- Arms and bays in the flock's outline, and a shape that lasts: see the film comparison.
+- The lever sweep (`LIMIT`) and the fish audit predate the timed turns and the hunters' new timetable.
+  Fish were re-flown at the defaults; the starling sweep was not repeated.
 - Something for starlings to fly around. The marsh under the reed beds is ground only.
 - Safari, Firefox, real phones and trackpads.

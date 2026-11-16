@@ -52,17 +52,22 @@ it, so it sweeps from side to side in front of you.
 **Tune** (top right) holds everything else.
 
 - **A scene is three choices:** the species (starlings or fish), the place and the behaviour. Starlings
-  have reed beds, a still lake, open sea, mountains and desert; fish have open ocean, a lagoon, a kelp
-  forest and a coral reef. The built-in scenes are pairings of a place and a behaviour; any place can be
-  paired with any behaviour of the same species. Changing
-  the place or the behaviour does not restart anything: the same animals carry on and respond.
-- **Shape** runs from a ball to a thin slab. **Field notes** is a quiet line under the title that names
-  what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.
-- **A seed** draws the individuals, the sky, the flock's size and the hunters' visits. For starlings it
-  also moves the flight itself a little: tightness, restlessness, alignment, roaming, pace, fear and how
-  fast a turn travels are each drawn from a bell curve around the scene's own value and clipped to a set
-  range. *Seed variety* sets how far a seed may go; at zero only the weather changes. Fish keep the
-  scene's values unless you turn it up.
+  have reed beds, a still lake, open sea, mountains and desert, and fly an evening roost, a wide veil, a
+  tight ball, restless, into the wind, or on edge with falcons about. Fish have open ocean, a lagoon, a
+  kelp forest and a coral reef, and travel as a school, mill in a ring or pack into a bait ball. Each
+  built-in scene pairs a place with a different behaviour, so the scenes differ in how the flock flies
+  and not only in what is behind it; any place can be paired with any behaviour of the same species.
+  Changing the place or the behaviour does not restart anything: the same animals carry on and respond.
+- **Shape** runs from a ball to a thin slab. **Field notes**, off until you turn it on, is a quiet line
+  under the title that names what is happening as it happens: a turn sweeping the flock, a falcon
+  arriving, the flock balling up.
+- **A seed** is a different evening. It draws the individuals, where you stand, the hour and the sky, the
+  flock's size and the hunters' visits, and it moves the flight itself: Tightness and Restlessness land
+  anywhere within a quarter of their scale either side of where the behaviour sets them, and alignment,
+  roaming, pace, fear and escape strength are drawn around the scene's values. *Seed variety* sets how
+  far a seed may go; at zero only the weather changes. Fish are moved less.
+- **Let the sun move** is on. Over a few minutes the sun sets and comes back up; under water it swings
+  across the surface, so the shafts lean and sweep and the light warms and cools.
 - **A lever you move stays where you put it** through a reseed, and is marked with a dot. *Reset them*
   hands those levers back to the scene and the seed.
 - **Left alone**, the page moves on by itself after two minutes: a new seed and any pairing of place and
@@ -109,16 +114,22 @@ None of these three has been tried yet. If one fails, please open an issue.
   instead of standing in layers. And the sheet lies in the plane of the birds' wings, so it rolls over
   when the flock turns. The pull comes and goes, so the flock is now a sheet and now gathered into a
   ball. Measured small flocks average about 1 : 2.8 : 5.6 thick, wide and long (Ballerini et al. 2008b).
-- **Turns travel, and the whole flock makes each one.** A turn is started by a bird at the edge, or by
-  the birds out in front when the flock is leaving home, and copied by each neighbour 30 to 100 ms later,
-  so it crosses the flock as a wave at 23 to 30 m/s. Field measurements put that speed at 20 to 40 m/s
-  (Attanasi et al. 2014). Every bird makes the same turn at the same rate, and the rate is slow enough
-  that the wave has crossed the flock before the first birds have turned far: big flocks wheel slowly,
-  small ones dart. One turn runs at a time; of two begun together the bigger carries the flock; a bird the
-  wave misses across a gap follows a moment later, as if it had seen the flock wheel.
+- **Turns travel, and the whole flock makes each one.** One turn runs at a time. It begins at one bird,
+  out at the edge, or out in front when the flock is leaving home, and every other bird begins it at the
+  moment a wave from that point, travelling at 27 m/s, reaches it. Field measurements put that speed at
+  20 to 40 m/s (Attanasi et al. 2014). Every bird turns through the same angle at the same rate, and big
+  flocks wheel more slowly than small ones. Because the moment of turning changes smoothly from one side
+  of the flock to the other, a turn shears the flock: the far side flies on for a moment longer. That is
+  where its changing shapes come from, the stretch into a streamer, the twist, the fold, and it does not
+  tear. Most turns are small; about one in four is a right angle or more. The page keeps the time (it
+  names the turn, where it begins and when) and the birds do the flying.
+- **Coming back.** The page also tells the birds where the main body of the flock is, how it lies and
+  where it is going. A bird, or a body of birds, that has come away flies back: fast from far off, at a
+  closing speed that falls as the gap closes, so it arrives alongside and already flying the flock's way
+  instead of shooting through. The flock leans toward a large lost part and slows for it.
 - **Steering with the mass.** Besides its neighbours, each bird steers with the average motion of the
   birds around it, read from a coarse field of density and velocity. Where two bodies of birds meet they
-  turn to fly together instead of passing through each other. A bird that has fallen out sprints back.
+  turn to fly together instead of passing through each other.
   A travelling school of fish does the same, more gently; milling rings and bait balls keep their own rules.
 - **Alarm travels as a dark band.** A startle begins in one place: where you tap, among the birds nearest
   a falcon, or by itself a few times a minute. Each bird passes it to its neighbours about 70 ms later, so
@@ -129,7 +140,9 @@ None of these three has been tried yet. If one fails, please open an issue.
   is that roll, the whole wing turned to the watcher for a moment (Hemelrijk et al. 2015). A bird a pixel
   or two across cannot show a roll, so far birds are drawn darker for that moment instead.
 - **Hunters.** A peregrine circles above, stoops through the edge of the flock at 46 m/s, pulls out
-  below and climbs back. Hawks give chase. For fish there are sharks and tuna.
+  below and climbs back. Hawks give chase. For fish there are sharks and tuna. Over starlings a wild
+  hunter is an event: the first comes after a minute or so, stays about half a minute, waits for the
+  flock to close up before each pass, and then leaves the flock to itself for a minute or two.
 - **Moving air and water.** The wind, or under water the current, carries every animal with it, stronger
   higher up, with gusts and eddies, so the flock has to work back against it to stay over home. It is a
   flow field, not a fluid solver: there are no thermals or pressure systems, and light is not bent by it.
@@ -148,70 +161,82 @@ None of these three has been tried yet. If one fails, please open an issue.
 
 ## How it was tuned
 
-Flight speed is 10.6 m/s, inside the 7 to 12 m/s reported for real flocks (Attanasi et al. 2014).
+Everything here was measured on an Apple M5 with the page's own defaults, wild hunter included, unless it
+says otherwise. [`tools/flock-metrics.js`](tools/flock-metrics.js) reads the simulation's own state: the
+share of birds in the largest connected body, the flock's three axes and how the thin one stands to
+gravity, nearest-neighbour distance, and how fast the heading changes.
 
-The flock's structure is measured from the simulation's own state by [`tools/flock-metrics.js`](tools/flock-metrics.js):
-the share of birds in the largest connected body, the flock's three axes and how the thin one stands to
-gravity, nearest-neighbour distance, and how fast the heading changes. On an Apple M5, one-minute runs
-with 16,384 and 32,768 birds:
+**Holding together.** For a long time the flock was measured with the hunters switched off, and by those
+numbers it was whole 97% of the time. With the defaults it was not: in the one run that was logged, the
+flock was in two or more bodies at some point in 12 of 21 ten-second stretches. There were two causes. A
+turn was passed from neighbour to neighbour, and birds it reached by a roundabout way started a few tenths
+of a second after the birds beside them and ended the turn metres away, as a second body, which the next
+turn then reached or did not. And a wild hunter was present two thirds of the time, attacking a flock that
+had not closed up from the last pass. Now a turn is one timed wave, a bird that has come away is flown
+back to the nearest part of the flock without overshooting, and a hunter is an event (see *How it works*).
 
-| | Before the turn rules were rewritten (2 runs) | Now (5 runs) | Measured flocks |
+| Starlings, page defaults | Before | Timed turns only | Now |
 |---|---|---|---|
-| Time with under 90% of the birds in one body | 55 and 75% | 2% on average; none in three of the five | not reported |
-| Thick : wide : long | about 1 : 1.6 : 3.5 | about 1 : 2.5 : 5.5, swinging between a thin sheet and a ball | 1 : 2.8 : 5.6 |
-| Thin axis to vertical | about 55° | about 35° | near vertical |
-| Nearest neighbour | not measured | 0.5 m | 0.7 to 1.5 m |
-| Speed of a turn across the flock | 22 to 24 m/s | 23 to 30 m/s | 20 to 40 m/s |
+| Runs | 1 (12,288 birds, 3.5 minutes) | 3 (12,032 to 19,968 birds, 3 minutes) | 8, across the seven built-in scenes (9,984 to 49,152 birds, 3 minutes) |
+| Time with under 90% of the birds in one body | in 12 of 21 ten-second stretches | 21%, 20% and 10% of samples | none, sampled every two seconds |
 
-With two falcons released on it at once the flock was in more than one body about a quarter of the time
-(17 to 38% over four runs), which is what falcons are for. A startle used to reach four birds in ten at
-once and then smoulder in patches; it is now one band at about 15 m/s that reaches 98% of the birds and
-ends. Seeds vary the flight levers within limits (*Seed variety*); the corners of that range were each
-flown for a minute and stayed whole. Tightness at its maximum with Restlessness at zero used to split a
-third of the time; the calm end of Restlessness was made less extreme and it now splits about as rarely as
-the default (3% over four runs).
+In those eight runs the seeds had put Tightness between 0.20 and 0.68 and Restlessness between 0.33 and
+0.80. With a peregrine released on the flock at once, one to three dives landed in half a minute, and in
+one run of three the flock parted (62% in the larger body at the worst).
 
-Then both ends of every flight lever were flown for a minute, for starlings and for fish (92 runs). For
-starlings 42 of 46 ends kept one flock. The four that did not (Personal space at its lowest, and Pull at
-the edges, Wind and Escape strength at their highest) had their sliders shortened and were flown again: whole in every run but
-one, which was in more than one body 11% of the time with the wind at its new maximum. So a slider now
-ends where the flock still holds together, and the range depends on the species. For fish no end packed,
-froze or scattered the school, so nothing was shortened. After the alarm was made a travelling band, the
-levers that feed it were flown again at their highest (Escape strength, Panic spread, Startles per minute,
-Restlessness): whole in every run, and in more than one body 5% of the time with the first three together.
+**Shape.** Three default runs, hunter included, against field measurements of small flocks:
 
-Fish were measured the same way. Neighbours are about one body length apart in a travelling school and
-three quarters of one in a bait ball, schools do not pass through each other, and a travelling school
-divides and rejoins now and then (one run in five). Their rules were left alone apart from two that act
-only at the margins, because the schools already form the shapes real ones do.
+| | Now | Measured flocks |
+|---|---|---|
+| Thick : wide : long | about 1 : 2.4 : 4.4, swinging between a thin sheet and a ball | 1 : 2.8 : 5.6 (Ballerini et al. 2008b) |
+| Thin axis to vertical | about 30° | near vertical |
+| Nearest neighbour | 0.5 to 0.6 m | 0.7 to 1.5 m |
+| Speed of a turn across the flock | 27 m/s, set | 20 to 40 m/s (Attanasi et al. 2014) |
+| Flight speed | 10.6 m/s | 7 to 12 m/s |
+| A startle | one band at about 15 m/s that reaches 98% of the birds and ends | a band at 13.4 m/s (Procaccini et al. 2011) |
 
 **Against film.** Four clips of real murmurations were reduced to silhouette statistics, using the
 frames that show a whole flock clear of the frame's edge, and [`tools/silhouette-metrics.js`](tools/silhouette-metrics.js)
-takes the same statistics from the simulation as seen from the ground (five runs, 16,384 to 65,536 birds):
+takes the same statistics from the simulation as seen from the ground (five default runs, 17,152 to
+21,248 birds):
 
 | | Simulation | Film |
 |---|---|---|
-| Length over width of the silhouette | 2.0 to 3.5 | 1.7 to 5.4 |
+| Length over width of the silhouette | 1.8 to 2.7 | 1.7 to 5.4 |
 | Separate bodies | 1 | 1.1 to 1.7 |
-| Darkness, median inside the silhouette (0 sky, 1 solid) | 0.27 to 0.45 | 0.13 to 0.22 |
+| Darkness, median inside the silhouette (0 sky, 1 solid) | 0.25 to 0.33 | 0.13 to 0.22 |
 | Darkest twentieth over the median | 1.5 to 1.8 | 1.7 to 2.4 |
-| Area over the area of its convex hull | 0.85 to 0.95 | 0.69 to 0.78 |
-| Share of the outline that differs a second later | 0.13 to 0.28 | 0.43 to 0.46 |
+| Area over the area of its convex hull | 0.90 to 0.95 | 0.69 to 0.78 |
+| Share of the outline that differs a second later | 0.16 to 0.24 | 0.43 to 0.46 |
 
-So the simulated flock has the proportions of the filmed ones and holds together as they do, but it is
-darker, its outline is rounder, with fewer arms and bays, and it changes shape about half as fast. Turning
-Restlessness up closes some of that gap and costs wholeness, so the default was left where it is.
+So the simulated flock has the proportions of the filmed ones, but it is darker, its outline is rounder,
+with fewer arms and bays, and by this measure it changes shape about half as fast. A turn now stretches
+and twists the flock, which a contact sheet shows plainly, but the forces that hold the flock together
+round it off again within seconds. Turning faster (1.6 and 2.2 times) and letting a turn cross the flock
+more slowly (20 m/s) were both tried, two runs each: neither raised the rate of change and both cost a
+little wholeness, so neither was kept. This is the largest gap left between the page and film.
+
+**Sliders and seeds.** A slider ends where the flock still held together when both ends of every flight
+lever were flown for a minute, for starlings and for fish (92 runs). That sweep was made before turns
+were rewritten and with the hunters off, and has not been repeated; four starling sliders were shortened
+by it (Personal space, Pull at the edges, Wind, Escape strength) and none for fish.
+
+**Fish.** With the defaults, hunters included, seven one-minute runs over the five built-in scenes:
+neighbours 0.6 to 0.7 m apart in a travelling school (about a body length) and 0.5 m in a bait ball; a
+travelling school was in more than one body 0 to 12% of the time, dividing and rejoining as schools do;
+the ring and the ball never divided. The fish's own rules have not been changed by any of the work on
+starlings' turns; a seed now moves a school's Tightness and Restlessness a little (0.35 to 0.65).
 
 [`docs/NOTES.md`](docs/NOTES.md) records what went wrong at each step and why, and how to repeat the
 measurements.
 
 ## Known limits
 
-- The veil does not fold over itself as the largest real flocks do. It is a sheet that rolls, thickens
-  into a ball and thins again, with a dark band crossing it when it is startled.
-- Against film the flock is darker, rounder in outline and slower to change shape (the table above).
-- One turn at a time is kept with knowledge no single bird has: the page counts how many birds are
-  turning. Real flocks manage it by eye.
+- Against film the flock is darker, rounder in outline and slower to change shape (the table above). It
+  stretches and twists through a turn but does not keep an arm or a fold for long.
+- Turns are conducted. The page decides when a turn begins, where, which way and how far, and tells the
+  birds where the main body of the flock is. Real flocks manage all of that by eye, bird to bird.
+- The slider limits were measured before turns were rewritten and have not been measured again.
 - Birds still fly closer together than measured flocks. With tens of thousands of birds instead of
   hundreds of thousands, real spacing reads as pale dots rather than a dark sheet.
 - The starling places have nothing to fly around, and the hills and trees on their horizons are painted.
