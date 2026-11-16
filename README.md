@@ -17,20 +17,35 @@ typefaces are embedded). It needs WebGL2 with float render targets, which curren
 
 ## Controls
 
-| Tool or input | What it does |
+**Drag looks, tap acts, hold grabs**, the same with a mouse, a trackpad, a pen or a finger.
+
+| Gesture | What it does |
 |---|---|
-| **Hunter** | Hold and drag: a falcon (or a shark) chases where you point for as long as you hold. Click or tap to make it dive. |
-| **Startle** | Click or tap near the flock to send a panic wave from that spot. |
-| **Lure** | Hold and drag: the flock is drawn toward where you point. |
-| **Add hunter** | Click or tap to release a wild hawk, falcon, shark or tuna. |
-| **Inspect** | Click or tap one bird, or a hunter, to see its traits and ride along with it. A right-click does the same with any tool. |
-| **Mouse** | The left button uses the tool. Drag with the right button, or with Shift held, to look around. The wheel zooms. |
-| **Trackpad** | Click and drag uses the tool. A two-finger swipe looks around; a pinch zooms. |
-| **Touch** | One finger uses the tool. Two fingers look around; a pinch zooms. |
+| **Drag** | Look around. Let go while moving and the view carries on a little. |
+| **Wheel or pinch** | Zoom. On a trackpad a two-finger swipe looks around and a pinch zooms. |
+| **Tap or click** | The tool's one action at that spot. |
+| **Press and hold** | Take hold of the hunter or the lure; it follows the pointer until you let go. With a mouse the right button, or Shift, takes hold at once. |
+| **Right-click** | Inspect the bird or hunter under the pointer, whatever the tool. |
+| **Three-finger tap** | The next view. |
 | **Keys** | `1`–`9`, `0` scenes · arrows look around · `+` `-` zoom · `V` view · `R` reseed · `N` new sky · `H` hide panel · `Space` pause · `F` full screen · `S` screensaver |
 
-The same gesture does the same thing with a mouse, a pen or a finger, and nothing follows a pointer that
-is not pressed.
+| Tool | Tap | Hold |
+|---|---|---|
+| **Hunter** | A falcon (or a shark) dives at that spot. | It chases where you point. |
+| **Startle** | A panic wave from that spot. | |
+| **Lure** | | The flock is drawn toward where you point. |
+| **Add hunter** | Releases a wild hawk, falcon, shark or tuna. | |
+| **Inspect** | Shows one animal's traits and rides along with it. | |
+
+Nothing follows a pointer that is not pressed.
+
+**Three views.** *Orbit* circles the flock at a distance fitted to its size and to the shape of your
+screen. *From the ground* stands at one spot by the roost and follows the flock with a lens that widens
+and narrows to keep it filling about half the frame, as a photographer would. *Ride along* flies behind
+one bird. Left alone, the camera is never quite still: it circles slowly, rises and sinks a little, and
+breathes in and out. Zooming out stops where a bird would fall under about a pixel and a third on your
+screen, so a small or coarse screen stays closer. The flock's home is wider across your view than along
+it, so it sweeps from side to side in front of you.
 
 ## Scenes, seeds and links
 
@@ -50,6 +65,8 @@ is not pressed.
   scene's values unless you turn it up.
 - **A lever you move stays where you put it** through a reseed, and is marked with a dot. *Reset them*
   hands those levers back to the scene and the seed.
+- **Left alone**, the page moves on by itself after two minutes: a new seed and any pairing of place and
+  behaviour, starlings or fish. A scene you adjusted or saved is given six minutes, and Back returns to it.
 - **Save** keeps the scene, the seed and your levers in this browser under a name.
 - **Copy link** puts all of it in the address, for example
   `?scene=still-lake&seed=34&set=tight:0.3`. A link cannot push a lever past its slider.
@@ -85,14 +102,16 @@ None of these three has been tried yet. If one fails, please open an issue.
 - **The rules.** Keep your space, match your neighbours' heading and pace, close up when you fall behind,
   ease off out in front, and drift back toward the bulk of the flock and the roost. Birds differ a little
   in size, pace, boldness and sociability, and their mood drifts.
-- **A slab, not a ball.** Measured flocks are slabs, on average about 1 : 2.8 : 5.6 thick, wide and long,
-  thinnest roughly along gravity (Ballerini et al. 2008b). Each bird closes up on the middle of the flock
-  along its own "up", the way it feels up in a banked turn, so the slab is level in straight flight, tilts
-  through turns and is free to bend. The pull stops once a bird's neighbours are as near as they should
-  be, and it comes and goes, so the flock is now a sheet and now gathered into a ball.
+- **A veil, not a ball.** A big flock is a sheet far wider than it is thick; dark and pale are the same
+  sheet seen edge-on and face-on. Three rules make it one here. Each bird closes up on the middle of the
+  flock along the normal to the sheet. A bird above or below counts as nearer than it is, and the bird
+  steps aside from it rather than up or down, which is what lets a squeezed flock flow out sideways
+  instead of standing in layers. And the sheet lies in the plane of the birds' wings, so it rolls over
+  when the flock turns. The pull comes and goes, so the flock is now a sheet and now gathered into a
+  ball. Measured small flocks average about 1 : 2.8 : 5.6 thick, wide and long (Ballerini et al. 2008b).
 - **Turns travel, and the whole flock makes each one.** A turn is started by a bird at the edge, or by
-  the birds out in front when the flock is leaving home, and copied by each neighbour 45 to 140 ms later,
-  so it crosses the flock as a wave at 22 to 24 m/s. Field measurements put that speed at 20 to 40 m/s
+  the birds out in front when the flock is leaving home, and copied by each neighbour 30 to 100 ms later,
+  so it crosses the flock as a wave at 23 to 30 m/s. Field measurements put that speed at 20 to 40 m/s
   (Attanasi et al. 2014). Every bird makes the same turn at the same rate, and the rate is slow enough
   that the wave has crossed the flock before the first birds have turned far: big flocks wheel slowly,
   small ones dart. One turn runs at a time; of two begun together the bigger carries the flock; a bird the
@@ -100,6 +119,7 @@ None of these three has been tried yet. If one fails, please open an issue.
 - **Steering with the mass.** Besides its neighbours, each bird steers with the average motion of the
   birds around it, read from a coarse field of density and velocity. Where two bodies of birds meet they
   turn to fly together instead of passing through each other. A bird that has fallen out sprints back.
+  A travelling school of fish does the same, more gently; milling rings and bait balls keep their own rules.
 - **Alarm travels too.** A startled bird startles its neighbours, so a pulse runs away from an attacking
   falcon as a ripple across the slab, the model's version of the waves filmed in real flocks under attack
   (Procaccini et al. 2011).
@@ -127,40 +147,67 @@ inside the 7 to 12 m/s reported for real flocks (Attanasi et al. 2014).
 
 The flock's structure is measured from the simulation's own state by [`tools/flock-metrics.js`](tools/flock-metrics.js):
 the share of birds in the largest connected body, the flock's three axes and how the thin one stands to
-gravity, nearest-neighbour distance, and how fast the heading changes. On an Apple M5, ten one-minute
-runs of the present rules (4,096 to 32,768 birds, three scenes) against two of the rules before the turns
-were rewritten (16,384 birds):
+gravity, nearest-neighbour distance, and how fast the heading changes. On an Apple M5, one-minute runs
+across 4,096 to 32,768 birds:
 
-| | Before | Now | Measured flocks |
+| | Before the turn rules were rewritten (2 runs) | Now (8 runs) | Measured flocks |
 |---|---|---|---|
-| Time with under 90% of the birds in one body | 55 and 75% | 3% on average; none in seven of the ten runs | not reported |
-| Thick : wide : long | about 1 : 1.6 : 3.5 | about 1 : 1.8 : 4, swinging between a thin sheet and a ball | 1 : 2.8 : 5.6 |
-| Thin axis to vertical | about 55° | about 40° | near vertical |
-| Nearest neighbour | not measured | 0.58 m | 0.7 to 1.5 m |
+| Time with under 90% of the birds in one body | 55 and 75% | 3% on average; none in six of the eight | not reported |
+| Thick : wide : long | about 1 : 1.6 : 3.5 | about 1 : 3 : 6, swinging between a thin sheet and a ball | 1 : 2.8 : 5.6 |
+| Thin axis to vertical | about 55° | about 30° | near vertical |
+| Nearest neighbour | not measured | 0.5 to 0.6 m | 0.7 to 1.5 m |
+| Speed of a turn across the flock | 22 to 24 m/s | 23 to 30 m/s | 20 to 40 m/s |
 
-Seeds vary the flight levers within limits (*Seed variety*). The corners of that range, and the ends of
-the Tightness and Restlessness sliders, were each flown for a minute: the flock stayed in one body at
-least 93% of the time in all but one (Tightness at its maximum with Restlessness at zero, 63%).
+With two falcons hunting it the flock was in more than one body 20% of the time, which is what falcons
+are for. Seeds vary the flight levers within limits (*Seed variety*); the corners of that range were each
+flown for a minute and stayed whole. Tightness at its maximum with Restlessness at zero used to split a
+third of the time; the calm end of Restlessness was made less extreme and it now splits about as rarely as
+the default (3% over four runs).
+
+Fish were measured the same way. Neighbours are about one body length apart in a travelling school and
+three quarters of one in a bait ball, schools do not pass through each other, and a travelling school
+divides and rejoins now and then (one run in five). Their rules were left alone apart from two that act
+only at the margins, because the schools already form the shapes real ones do.
+
+[`docs/NOTES.md`](docs/NOTES.md) records what went wrong at each step and why, and how to repeat the
+measurements.
 
 ## Known limits
 
+- The veil does not yet fold over itself or show clear dark lines where birds bunch, as the largest real
+  flocks do. It is a sheet that rolls, thickens into a ball and thins again.
 - One turn at a time is kept with knowledge no single bird has: the page counts how many birds are
   turning. Real flocks manage it by eye.
 - Birds still fly closer together than measured flocks. With tens of thousands of birds instead of
   hundreds of thousands, real spacing reads as pale dots rather than a dark sheet.
-- The comparison with the six clips was made before the turn rules were rewritten and has not been
+- The ground is flat and the starling places have nothing to fly around.
+- The comparison with the six video clips was made before the turn rules were rewritten and has not been
   repeated since.
 - Runs differ even with the same seed, so the measurements above are noisy.
-- So far it has only been run in Chromium browsers, and measured on one graphics chip. Safari, Firefox
-  and phones are untested.
+- So far it has only been run in Chromium browsers, and measured on one graphics chip. Safari, Firefox,
+  real phones and real trackpads are untested.
 
 ## Performance
 
 *Power use* in the panel has three levels: Eco (30 frames a second, about 8,000 birds), Balanced (60,
-about 16,000) and High (uncapped, about 32,000 at full resolution). Each seed varies the count, as real
-flocks vary. If the frame rate stays low, the
-page flies fewer birds and then lowers its resolution on its own. *Performance*, at the bottom of the
-panel, shows the frame rate, the slowest recent frame, the graphics chip in use and what was lowered.
+about 16,000) and High (as fast as the screen refreshes, about 32,000 at full resolution). Each seed
+varies the count, as real flocks vary. If the frame rate stays low, the page flies fewer birds and then
+lowers its resolution on its own. *Performance*, at the bottom of the panel, shows the frame rate, the
+slowest recent frame, the graphics chip in use and what was lowered.
+
+What a frame costs on an Apple M5 at 1.5 million pixels, simulation and drawing together:
+
+| Birds | Simulation | Whole frame | Frames a second it allows |
+|---|---|---|---|
+| 16,384 | 1.8 ms | 7.8 ms | about 125 |
+| 32,768 | 3.1 ms | 12 ms | about 80 |
+| 65,536 | 7.0 ms | 19 ms | about 50 |
+
+About 4.5 ms of every frame is the sky, bloom and other full-screen work, whatever the flock's size.
+Riding along inside the flock, where the detailed bodies are drawn, costs about 3 ms more at 16,384.
+Detail follows distance in two steps: a simple body (34 triangles, wings still below a few pixels) and a
+detailed one from about a dozen pixels' length. A third step, single points for the farthest birds, was
+considered and left out: drawing the simple bodies is under a third of the frame.
 
 ## References
 

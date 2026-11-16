@@ -36,7 +36,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:#07070a;color:var(--ink);font-family:var(--font-body);overflow:hidden;-webkit-font-smoothing:antialiased}
 canvas{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none;outline:none}
-canvas.dragging{cursor:grabbing}
+canvas{cursor:grab}canvas.dragging{cursor:grabbing}canvas.grabbing{cursor:crosshair}
 canvas.warming{opacity:0}
 canvas{transition:opacity 1.4s ease}
 
@@ -173,14 +173,14 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
-<canvas id="gl" tabindex="0" aria-label="Interactive murmuration simulation. Hold and drag to chase the flock with a hunter, click to dive, right-drag or use the arrow keys to look around."></canvas>
+<canvas id="gl" tabindex="0" aria-label="Interactive murmuration simulation. Drag or use the arrow keys to look around, click to send a hunter diving in, press and hold to chase the flock with it."></canvas>
 
 <header class="title">
   <h1>Murmuration</h1>
   <p id="subtitle">Golden Dusk · 32,768 starlings</p>
   <p class="note" id="note" role="status" aria-live="polite"></p>
 </header>
-<p class="hint" id="hint">Hold and drag to use the tool · Right-drag to look around · Scroll to zoom · <kbd>H</kbd> hides controls</p>
+<p class="hint" id="hint">Drag to look · Click to act · Hold to grab · Scroll to zoom · <kbd>H</kbd> hides controls</p>
 
 <button class="tune-btn" id="tuneBtn" aria-expanded="true" aria-controls="panel">
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4h7M13 4h1M2 12h2M8 12h6"/><circle cx="11" cy="4" r="1.8"/><circle cx="6" cy="12" r="1.8"/></svg>
@@ -207,15 +207,16 @@ body.ui-hidden .tools{opacity:0;pointer-events:none}
   <details><summary>How to play</summary>
     <div class="howto">
       <h3>Tools (bar at the bottom)</h3>
-      <dl><dt>Hunter</dt><dd>Hold and drag: a falcon (or shark) chases where you point for as long as you hold. Click or tap to make it dive.</dd>
+      <dl><dt>Hunter</dt><dd>Click or tap and a falcon (or shark) dives at that spot. Press and hold and it chases where you point until you let go.</dd>
       <dt>Startle</dt><dd>Click near the flock to send a panic wave from that spot.</dd>
-      <dt>Lure</dt><dd>Hold and drag: the flock is drawn toward where you point.</dd>
+      <dt>Lure</dt><dd>Press and hold: the flock is drawn toward where you point.</dd>
       <dt>Add hunter</dt><dd>Click to release a wild hawk, falcon, shark or tuna there.</dd>
       <dt>Inspect</dt><dd>Click one bird to see its size, pace, boldness and sociability, then ride along with it.</dd></dl>
       <h3>Moving around</h3>
-      <dl><dt>Mouse</dt><dd>The left button uses the tool. Drag with the right button (or hold Shift) to look around; scroll to zoom.</dd>
-      <dt>Trackpad</dt><dd>Click and drag uses the tool. Swipe with two fingers to look around; pinch to zoom.</dd>
-      <dt>Touch</dt><dd>One finger uses the tool. Two fingers look around; pinch to zoom.</dd></dl>
+      <p>The same on every device: <b>drag looks, tap acts, hold grabs.</b></p>
+      <dl><dt>Mouse</dt><dd>Drag to look around; the wheel zooms. Click for the tool’s action. Hold the button still for a moment to take hold of the hunter or lure, or use the right button (or Shift) to take hold at once.</dd>
+      <dt>Trackpad</dt><dd>The same, and a two-finger swipe looks around and a pinch zooms.</dd>
+      <dt>Touch</dt><dd>Drag to look around; pinch to zoom. Tap for the tool’s action. Press and hold to take hold. Tap with three fingers for the next view.</dd></dl>
       <h3>Keys</h3>
       <p><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd> scenes · <kbd>V</kbd> view · <kbd>R</kbd> reseed · <kbd>N</kbd> new sky · <kbd>H</kbd> hide panel · <kbd>Space</kbd> pause · <kbd>F</kbd> full screen · <kbd>S</kbd> screensaver · arrows look around · <kbd>+</kbd> <kbd>−</kbd> zoom</p>
       <h3>What you are seeing</h3>
@@ -396,7 +397,7 @@ uniform float uXp[10];
 uniform vec3 uLurePos; uniform float uLure;
 uniform float uExcite, uThresh, uRefract, uWave, uSpont, uBlind;
 uniform float uSheet, uFlow, uQuiet, uTurnRate;
-uniform vec3 uFlowV; uniform int uObst;
+uniform vec3 uFlowV; uniform int uObst; uniform float uThick; uniform vec3 uViewF;
 uniform vec4 uWaveO; uniform float uWaveCode;
 uniform vec2 uBounds;
 layout(location=0) out vec4 oPos; layout(location=1) out vec4 oVel; layout(location=2) out vec4 oAux1; layout(location=3) out vec4 oAux2;
@@ -434,6 +435,16 @@ void main(){
   vec3 up = vec3(0.0, 1.0, 0.0);
   vec3 rt = cross(fwd, up); float rl = length(rt); rt = rl > 1e-3 ? rt / rl : vec3(1.0, 0.0, 0.0);
   vec3 upP = cross(rt, fwd);
+  // The flock is a veil: a sheet a bird or two thick lying in the plane of its birds' wings. Level in straight flight, it
+  // rolls over with them in a turn, which is what swings it between a pale face and a dark edge.
+  // (The roll comes from the turn the whole flock is making, which every bird shares, not from each bird's own twitches.)
+  vec3 nS = vec3(0.0, 1.0, 0.0);
+  if (uSpecies == 0 && intent > 0.0) {
+    float q0 = floor(intent / 16.0), t0 = intent - q0 * 16.0, m0 = floor(q0 / 64.0), a0 = (q0 - m0 * 64.0) / 64.0 * 6.2831853;
+    float rate0 = uTurnRate * uXp[4] * 0.5 * (uXp[8] > 0.0 ? 0.75 / uXp[8] : 1.0), dur0 = min((m0 + 1.0) * 0.33 / rate0 + 0.3, 14.5);
+    float env0 = smoothstep(0.0, 0.6, t0) * (1.0 - smoothstep(dur0 - 0.6, dur0 + 0.4, t0));
+    nS = normalize(vec3(0.0, 9.8, 0.0) + (rt * cos(a0) + upP * sin(a0) * 0.5) * uSpeed * rate0 * env0 * 1.6);
+  }
 
   // nobody is quite the same: vigour (size, pace, quick turns), boldness (less fear, more initiative)
   // and sociability (follows neighbours more closely), partly correlated with each other
@@ -460,7 +471,7 @@ void main(){
     flee += normalize(away * 0.55 + side) * uFlee * uHThreat[h] * f * f;
     if (f * uHThreat[h] > fear * threat) { fear = f; threat = uHThreat[h]; }
   }
-  float rs = uSep * (1.0 + (uSpecies == 0 ? 0.35 : 1.3) * fear * fear * threat) * (1.0 - 0.18 * alarm);
+  float rs = uSep * (1.0 + (uSpecies == 0 ? 0.35 : 1.3) * fear * fear * threat) * (1.0 - 0.18 * alarm - (uSpecies == 0 ? 0.32 * e : 0.0));   // (birds bunch as the alarm passes: a dark line through the veil)
 
   // what each bird can see: its few nearest neighbours
   vec4 NA = texelFetch(uNbrA, uv, 0), NB = texelFetch(uNbrB, uv, 0);
@@ -474,7 +485,11 @@ void main(){
     ivec2 ju = ivec2(j % uW, j / uW);
     vec4 Pj = texelFetch(uPos, ju, 0);
     vec3 d = Pj.xyz - p; float dist = length(d) + 1e-4; vec3 dn = d / dist;
-    if (dist < rs) { float q = (rs - dist) / rs; sep -= dn * q * (0.6 + 0.4 * q); }
+    float dsep = dist; vec3 dns = dn;
+    // Starlings do not fly stacked: a bird above or below counts as nearer than it is, and the bird steps aside from it
+    // rather than up or down. That is what lets a squeezed flock flow out sideways into a sheet instead of standing in layers.
+    if (uSpecies == 0) { float dz = dot(d, nS); dsep = sqrt(max(dist * dist - dz * dz * 0.7 * uSheet, 1e-6)); vec3 dh = d - nS * dz * 0.85 * uSheet; dns = dh / (length(dh) + 1e-4); }
+    if (dsep < rs) { float q = (rs - dsep) / rs; sep -= dns * q * (0.6 + 0.4 * q); }
     float fa = dot(dn, fwd);
     if (fa < uBlind) continue;
     vec4 Vj = texelFetch(uVel, ju, 0); float sj = length(Vj.xyz);
@@ -483,7 +498,7 @@ void main(){
     vec4 a1j = texelFetch(uAux1, ju, 0);
     nst += a1j.xyz;
     // a neighbour that began a turn a moment ago (45-110 ms): this bird copies it
-    if (uSpecies == 0 && a1j.w > 0.0) { float qj = floor(a1j.w / 16.0), el = a1j.w - qj * 16.0; if (el > 0.045 && el < 0.14) relay = max(relay, qj); nbTurn = 1.0; }
+    if (uSpecies == 0 && a1j.w > 0.0) { float qj = floor(a1j.w / 16.0), el = a1j.w - qj * 16.0; if (el > 0.03 && el < 0.1) relay = max(relay, qj); nbTurn = 1.0; }
     maxE = max(maxE, Pj.w);
     if (fa > 0.5) dAhead = min(dAhead, dist);
     if (fa < -0.5) dBehind = min(dBehind, dist);
@@ -492,8 +507,9 @@ void main(){
 
   // steering wants go through the turning low-pass; only a share acts at once
   // (birds on the rim of the flock let neighbours come closer, so the border is denser, as in real flocks)
+  if (uSpecies == 0) edge -= nS * dot(edge, nS) * uSheet;      // in a veil every bird is on a face; the edge that matters is the rim of the sheet
   float rim = cnt > 0.0 ? smoothstep(0.25, 0.7, length(edge) / cnt) : 0.0;
-  sep *= 1.0 - 0.45 * rim;
+  sep *= 1.0 - 0.45 * rim * (uSpecies == 0 ? 1.0 - 0.7 * uSheet : 1.0);
   vec3 acc = sep * uWSep * 0.7 + flee * 0.6;
   direct += sep * uWSep * 0.3 + flee * 0.4;
   float order = 1.0, edgeness = 0.0, fb = 0.0, vNb = spd;
@@ -504,7 +520,16 @@ void main(){
     edgeness = length(edge) / cnt;
     fb = dot(edge / cnt, fwd);
     md /= cnt; vNb = nspd / cnt;
-    acc += (coh / cnt) * uWCoh * (1.0 + 0.22 * social) * (0.3 + uEdge * edgeness * edgeness * 2.2) * (1.0 + 0.6 * alarm) * (uSpecies == 0 ? 0.35 + 0.65 * smoothstep(0.7, 1.0, md / uSep) : 1.0);
+    vec3 cv = (coh / cnt) * uWCoh * (1.0 + 0.22 * social) * (0.3 + uEdge * edgeness * edgeness * 2.2) * (1.0 + 0.6 * alarm);
+    if (uSpecies == 0) {
+      // within the sheet birds close up only once their neighbours are well apart; across it they keep to their neighbours'
+      // level, give or take a little, so the sheet is a bird or two thick and not a single layer
+      float roomT = smoothstep(mix(0.7, 0.95, uSheet), mix(1.0, 1.35, uSheet), md / uSep), cn = dot(cv, nS);
+      acc += (cv - nS * cn * uSheet) * (0.35 + 0.65 * roomT);
+      float zo = dot(coh / cnt, nS);
+      acc += nS * clamp((zo - clamp(zo, -uThick, uThick)) * 12.0, -9.0, 9.0) * uSheet * (1.0 - 0.5 * clamp(alarm, 0.0, 1.0));
+      acc += (coh / cnt) * e * uWave * 9.0;      // and bunch as the alarm passes
+    } else acc += cv;
   } else md = X2.z;
 
   // home range: a roost the flock sweeps back and forth over
@@ -513,7 +538,7 @@ void main(){
     // so the swarm sweeps to and fro over it and folds as it turns, instead of wandering off
     // at the edge of home they wheel round it, all the same way, instead of turning straight back through the middle
     // (turning straight back made two halves swing through each other like a double pendulum)
-    vec2 dh = uRoost.xz - p.xz; float dl = length(dh) + 1e-3; vec2 dn2 = dh / dl;
+    vec2 dh = uRoost.xz - p.xz; dh += uViewF.xy * dot(dh, uViewF.xy) * uViewF.z; float dl = length(dh) + 1e-3; vec2 dn2 = dh / dl;
     acc.xz += (dn2 * (1.0 - 0.25 * uXp[0]) + vec2(-dn2.y, dn2.x) * uSwirl * 0.35 * uXp[0]) * uWRoost * uXp[1] * smoothstep(uRoostR * uXp[2], uRoostR * 1.7 * uXp[2], dl);
     // and the swarm as a whole drifts after home as it slowly moves
     vec2 dhc = uRoost.xz - uCenter.xz; float dlc = length(dhc) + 1e-3;
@@ -533,7 +558,7 @@ void main(){
 
   // every bird can see where the bulk of the swarm is: thin surroundings pull it toward the thick of the flock,
   // and overcrowded knots loosen. This is what merges clumps back and keeps one swarm with a crisp edge.
-  float room = uSpecies == 0 ? smoothstep(0.7, 1.0, md / uSep) : 1.0;
+  float room = uSpecies == 0 ? smoothstep(mix(0.7, 0.95, uSheet), mix(1.0, 1.35, uSheet), md / uSep) : 1.0;
   float dn = 0.0;
   if (uLong > 0.0) {
     float h = uGridCell;
@@ -548,18 +573,27 @@ void main(){
       acc -= gd * uLong * 0.5 * smoothstep(1.5, 3.0, dn);
     }
     if (uSpecies == 0) {
-      // A starling flock is a slab, not a ball: measured flocks are about 1 : 3 : 6 thick, wide and long, thinnest roughly
-      // along gravity (Ballerini et al. 2008). Each bird closes up on the middle of the slab along its own "up", the way it
-      // feels up in a banked turn, so the slab is level in straight flight, tilts through turns, and is free to bend and ripple.
-      vec3 nUp = normalize(vec3(0.0, 9.8, 0.0) + steer);
-      float gN = dot(gr, nUp) / (2.0 * h * max(densAt(p), 0.08 * uDensRef));       // (d rho / dn) / rho: about -offset / thickness^2
-      acc += nUp * clamp(gN * 46.0 * uSheet, -7.0, 7.0) * (1.0 - 0.6 * clamp(alarm, 0.0, 1.0)) * room;   // alarmed birds ball up instead
+      // from further off (a bird above or below the flock) the pull is toward the middle of the mass, along the same normal
+      float gN = dot(gr, nS) / (2.0 * h * max(densAt(p), 0.08 * uDensRef));       // (d rho / dn) / rho: about -offset / thickness^2
+      acc += nS * clamp(gN * 180.0 * uSheet, -8.0, 8.0) * (1.0 - 0.6 * clamp(alarm, 0.0, 1.0));
       // and every bird steers with the mass of birds moving around it, not only its seven neighbours: where two bodies of
       // birds meet they turn to fly together instead of passing through each other
       vec4 F = fieldAt(p);
       vec3 um = F.gba / max(F.r, 1e-3) - v;
       um -= fwd * dot(um, fwd) * 0.6;
       acc += um * uFlow * smoothstep(0.04, 0.25, F.r / uDensRef);
+    } else if (uFlow > 0.0) {
+      // A travelling school keeps its own loose order (that is where its shapes come from), so these act only at the
+      // margins: where the water around a fish is going a quite different way, which means another body of fish, it
+      // turns to swim with them; and a fish well outside the school is drawn back. (A milling ring and a bait ball keep
+      // their own rules.)
+      vec4 F = fieldAt(p);
+      vec3 um = F.gba / max(F.r, 1e-3) - v;
+      float other = smoothstep(0.5, 1.0, length(um) / max(uSpeed, 0.1));
+      um -= fwd * dot(um, fwd) * 0.6;
+      acc += um * uFlow * 2.0 * other * smoothstep(0.04, 0.25, F.r / uDensRef);
+      vec3 dm = uCenter - p; float ld = length(dm) + 1e-3;
+      acc += dm / ld * 1.2 * smoothstep(1.6, 2.8, ld / uSpread);
     }
   }
 
@@ -581,11 +615,11 @@ void main(){
   if (uSpecies == 0) acc += (tVel - v) * 0.3 * wR;   // (not for fish: a milling school's average velocity is zero)
   // and every part of the swarm is drawn toward the middle of the whole, so separate groups always converge
   vec3 dg = uCenter + uCenterVel * lead - p; float lg = length(uCenter - p) + 1e-3; vec3 dgn = normalize(dg);
-  float wG = uSpecies == 0 ? smoothstep(uR0 * 1.5, uR0 * 2.8, lg) : smoothstep(uR0 * 0.9, uR0 * 2.0, lg);
+  float wG = uSpecies == 0 ? smoothstep(max(uR0 * 1.5, uSpread * 2.0), max(uR0 * 2.8, uSpread * 3.4), lg) : smoothstep(uR0 * 0.9, uR0 * 2.0, lg);
   acc += dgn * max(uRegroup * (uSpecies == 0 ? 0.8 : 0.6) - max(dot(v - uCenterVel, dgn), 0.0) * 0.5, -uRegroup * 0.4) * wG;
 
   // and, gently and always, toward the middle of all the birds: two bodies flying side by side close up again
-  if (uSpecies == 0) { vec3 dm = uCenter - p; acc += dm * min(0.02, 1.6 / (length(dm) + 1e-3)) * room; }
+  if (uSpecies == 0) { vec3 dm = uCenter - p; acc += dm * min(0.02, 1.6 / (length(dm) + 1e-3)) * (0.5 + 0.5 * room); }
 
   // moving air or water: a divergence-free swirl
   vec3 q = p * uWindScale;
@@ -642,7 +676,7 @@ void main(){
     // already old; so the biggest of the turns begun together, or the newest, carries the whole flock.
     // (And a turn it has just made cannot come round and catch it again: without that, a turn could circle the flock for ever.)
     float myQ = itT > 0.0 ? floor(intent / 16.0) : -1.0;
-    float late = uTime - uWaveO.w - distance(p, uWaveO.xyz) / 20.0;
+    float late = uTime - uWaveO.w - distance(p, uWaveO.xyz) / 27.0;
     bool again = itT <= 0.0 && tIdle < 6.0;
     if (relay >= 0.0 && relay != myQ && !(again && relay == lastQ) && (itT <= 0.0 || relay > myQ || itT > 1.0)) { itM = floor(relay / 64.0); itA = (relay - itM * 64.0) / 64.0 * 6.2831853; itT = 0.001; }
     else if (uWaveCode >= 0.0 && uWaveCode != myQ && !(again && uWaveCode == lastQ) && (itT <= 0.0 || uWaveCode > myQ || itT > 1.0) && late > 0.15 && late < 0.6) {
@@ -654,9 +688,9 @@ void main(){
       if (cnt > 0.0 && uQuiet > 0.0 && nbTurn < 0.5) {
         // leaving home: the birds out in front turn back, and the turn sweeps the flock behind them, so the whole flock
         // comes round together instead of the front folding back through the rear
-        vec2 dh = uRoost.xz - p.xz; float dl = length(dh) + 1e-3; vec2 hd = dh / dl;
+        vec2 dh = uRoost.xz - p.xz; dh += uViewF.xy * dot(dh, uViewF.xy) * uViewF.z; float dl = length(dh) + 1e-3; vec2 hd = dh / dl;
         vec2 f2 = normalize(fwd.xz + vec2(1e-4, 0.0));
-        float out_ = smoothstep(uRoostR * 0.62 * uXp[2], uRoostR * 0.8 * uXp[2], dl) * smoothstep(0.1, 0.5, -dot(f2, hd));
+        float out_ = smoothstep(uRoostR * 0.5 * uXp[2], uRoostR * 0.72 * uXp[2], dl) * smoothstep(0.1, 0.5, -dot(f2, hd));
         float pr = uInit * uXp[5] * uDt * 0.09 / (0.15 * float(uN)) * smoothstep(0.25, 0.7, edgeness) * exp(0.7 * bold + 0.8 * mood);
         float prHome = uDt * 5.0 / float(uN) * out_;
         float r0 = rnd(hashu(uid * 0x27d4eb2du ^ st));
@@ -664,7 +698,7 @@ void main(){
           float want = acos(clamp(dot(f2, hd), -1.0, 1.0)) * (0.75 + 0.35 * rnd(hashu(uid ^ st ^ 0x5bd1e995u)));
           itA = dot(rt.xz, hd) > 0.0 ? 0.0 : 3.14159265;
           if (abs(f2.x * hd.y - f2.y * hd.x) < 0.05) itA = uSwirl > 0.0 ? 0.0 : 3.14159265;   // home dead astern: everyone goes round the same way
-          itM = clamp(floor(want / 0.33 - 0.5), 1.0, 7.0);
+          itM = clamp(floor(want / 0.33 - 0.5), 1.0, 4.0);      // at most about a right angle at a time; a second turn follows if it is still heading out
           itT = 0.001;
         } else if (r0 < prHome + pr) {
           vec3 inw = edge - fwd * dot(edge, fwd);
@@ -717,7 +751,7 @@ void main(){
   float zig = uSpecies == 0 ? sin((1.0 - e) * 6.2831853) : sin(uTime * 9.0 + dot(p, vec3(0.21, 0.13, 0.17)));
   if (uSpecies == 0) {
     direct += rt * zig * e * uWave * 8.0;
-    direct -= normalize(vec3(0.0, 9.8, 0.0) + steer) * e * uWave * mix(4.5, 11.0, uSheet);
+    direct -= nS * e * uWave * mix(4.5, 9.0, uSheet);
   } else {
     direct += fwd * e * uWave * 2.2 * uSpeed;
     direct += rt * zig * e * uWave * 1.2 * uSpeed;
@@ -1232,6 +1266,12 @@ float flockLight(vec3 p, out float amb){
 /* Starling: jointed wings. aX.x = part (0 body, 1 inner wing, 2 outer wing, 3 tail), aX.y = how thin it is (lets light through). */
 const BIRD_VS = AGENT_VS_HEAD + `
 void main(){
+  // the cheap test first: when both bodies are being drawn, most animals belong to the other one and need nothing more
+  if (uLod != 0 && uPred == 0) {
+    int id0 = gl_InstanceID * uStride; vec3 p0 = texelFetch(uPos, ivec2(id0 % uW, id0 / uW), 0).xyz;
+    float s0 = uSize * (1.0 + 0.12 * gauss3(uint(id0) * 7u + 11u) * uIndiv);
+    if (lodCull(s0 * 1.9 * uPx / length(p0 - uCam))) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  }
   vec3 p, F, R, U; float phase, e, effort; int id;
   agentFrame(p, F, R, U, phase, e, effort, id);
   float scale = uSize * (uPred == 1 ? uPredScale : 1.0 + 0.12 * gauss3(uint(id) * 7u + 11u) * uIndiv);
@@ -1299,6 +1339,12 @@ void main(){
 }`;
 const FISH_VS = AGENT_VS_HEAD + `
 void main(){
+  // the cheap test first: when both bodies are being drawn, most animals belong to the other one and need nothing more
+  if (uLod != 0 && uPred == 0) {
+    int id0 = gl_InstanceID * uStride; vec3 p0 = texelFetch(uPos, ivec2(id0 % uW, id0 / uW), 0).xyz;
+    float s0 = uSize * (1.0 + 0.12 * gauss3(uint(id0) * 7u + 11u) * uIndiv);
+    if (lodCull(s0 * 1.0 * uPx / length(p0 - uCam))) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  }
   vec3 p, F, R, U; float phase, e, effort; int id;
   agentFrame(p, F, R, U, phase, e, effort, id);
   float bend = aX.x;
@@ -1964,7 +2010,7 @@ function computeStats(){
   stats.pol = Math.hypot(vx, vy, vz) / n;
   // find the main body: link sampled birds closer than a few spacings, keep the biggest group
   const sp0 = SP[P.species], R0s = Math.cbrt(S.N * Math.pow(sp0.spacing * spaceK(), 3) / (4.19 * 0.5));
-  const m = pts.length, link = Math.max(3.5, R0s * 0.3), l2 = link * link;
+  const m = pts.length, link = Math.max(3.5, R0s * 0.3, P.species === 'bird' ? d[Math.floor(d.length * 0.7)] * 0.3 : 0), l2 = link * link;
   const par = new Int32Array(m); for (let i = 0; i < m; i++) par[i] = i;
   const find = (i) => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
   for (let i = 0; i < m; i++) for (let j = i + 1; j < m; j++) {
@@ -2114,7 +2160,17 @@ function updateCamera(dt){
   if (follow.hunter && !fh) follow.hunter = null;
   const ride = P.view === 'ride' && (fh || follow.p);
   // smoothed copies of what the user asked for
-  if (P.camDrift && !pointer.down && !pointer.multi) cam.yaw += dt * 0.022;   // a slow cinematic drift around the flock
+  // let go of a drag and the view carries on a little, easing to rest
+  if (pointer.flick && !pointer.down) {
+    const f = pointer.flick, [y0, b0] = orbitNow(), k = Math.exp(-dt * 4.5);
+    setOrbit(y0 + f.yaw * dt, b0 + f.pitch * dt); f.yaw *= k; f.pitch *= k;
+    if (Math.abs(f.yaw) + Math.abs(f.pitch) < 0.012) pointer.flick = null;
+  }
+  // left alone, the camera is never quite still: it circles the flock slowly (on the ground it strolls round the roost),
+  // rises and sinks a little and breathes in and out, each at its own unhurried pace
+  const drifting = P.camDrift && !pointer.down && !pointer.multi && !pointer.flick;
+  if (drifting && !ride) cam.yaw += dt * (P.view === 'ground' ? 0.008 : 0.02) * (1 + 0.45 * Math.sin(simTime * 0.037));
+  const breathe = P.camDrift ? 1 : 0, asp = canvas.width / Math.max(1, canvas.height);
   const dy = wrapA(cam.yaw - cam.syaw);
   cam.syaw += dy * (1 - Math.exp(-dt * 6));
   cam.spitch += (cam.pitch - cam.spitch) * (1 - Math.exp(-dt * 6));
@@ -2157,15 +2213,27 @@ function updateCamera(dt){
     const hd = Math.hypot(target[0] - pos[0], target[2] - pos[2]) || 1;
     const el = Math.atan2(target[1] - pos[1], hd);
     target[1] = pos[1] + Math.tan(Math.min(1.3, el * 0.82)) * hd;
-    fovT = 50 * Math.PI / 180 / cam.szoom;
+    // a tall, narrow screen sees less to either side, so it takes a wider view; and the view is never so wide that a bird
+    // falls under about a pixel and a third on this screen
+    const dg = V3.len(V3.sub(target, pos));
+    // from the ground the lens follows the flock's size, as a photographer's would: the flock fills about half the frame
+    cam.gfov = cam.gfov || 0.87; cam.gfov += (Math.max(0.22, Math.min(1.05, 5.2 * Math.atan(1.6 * cam.spread / Math.max(dg, 1)))) - cam.gfov) * (1 - Math.exp(-dt * 1.0));
+    fovT = cam.gfov / cam.szoom * (asp < 1 ? Math.min(1.5, Math.pow(1 / asp, 0.6)) : 1);
+    const widest = 2 * Math.atan(sp.size * P.size * (bird ? 1.9 : 1) * canvas.height / (2 * 1.35 * Math.max(dg, 1)));
+    fovT = Math.max(20 * Math.PI / 180, Math.min(fovT, widest));
   } else {
     if (cam.rpos) { cam.rpos = null; cam.rlook = null; }
     // orbit: a distance that suits the swarm's size (between a close and a wide shot), times your zoom
     const K = bird ? 4.0 : 3.4;
-    const want = Math.max(bird ? 60 : 12, Math.min(bird ? 650 : 130, cam.spread * K * cam.szoom));
+    // fitted to the frame (a tall screen stands further back), and never so far that a bird falls under about a pixel and
+    // a third on this screen: a small or coarse screen stays closer and lets the flock run off the edges instead
+    const fit = asp < 1 ? Math.min(2.1, Math.pow(1 / asp, 0.85)) : 1;
+    const far = Math.max(bird ? 90 : 16, Math.min(bird ? 650 : 130, sp.size * P.size * (bird ? 1.9 : 1) * canvas.height / (2 * Math.tan(cam.fov / 2)) / 1.35));
+    cam.zmax = Math.max(1, Math.min(3, far / Math.max(cam.spread * K * fit, 1)));
+    const want = Math.max(bird ? 60 : 12, Math.min(far, cam.spread * K * fit * cam.szoom * (1 + 0.05 * breathe * Math.sin(simTime * 0.029 + 1))));
     [cam.dist, cam.dv] = springS(cam.dist, cam.dv, want, 1.4, dt);
     // keep above the ground (or between the seabed and the surface) by limiting the angle, not by pushing the camera
-    let pitch = cam.spitch;
+    let pitch = cam.spitch + 0.045 * breathe * Math.sin(simTime * 0.041);
     const tY = cam.target[1];
     if (sky) pitch = Math.max(pitch, Math.asin(Math.max(-1, Math.min(1, (sc.eye + 1 - tY) / cam.dist))));
     else {
@@ -2192,6 +2260,7 @@ function setOrbit(yaw, b){
   if (P.view === 'ground') cam.u = Math.max(0, Math.min(1, b));
   else { const sky = SCENES[preset.scene].kind === 'sky'; cam.pitch = Math.max(sky ? -1.3 : -1.2, Math.min(sky ? 1.2 : 1.2, b)); }
 }
+const clampZoom = (z) => Math.max(0.3, Math.min(cam.zmax || 3, z));
 const orbitNow = () => P.view === 'ride' ? [cam.ryaw, cam.rpitch] : P.view === 'ground' ? [cam.yaw, cam.u] : [cam.yaw, cam.pitch];
 function pointerRay(){
   const nx = pointer.x / innerWidth * 2 - 1, ny = 1 - pointer.y / innerHeight * 2;
@@ -2362,7 +2431,7 @@ function hunters(){
 let flowPos = [0, 0, 0];
 function flowNow(){
   const az = (look.seed ? look.seed[0] : 0) * 1.7 + 0.3 * Math.sin(simTime * 0.021);
-  const mag = P.wind * (P.species === 'bird' ? 3.0 : 0.45) * (1 + 0.35 * dn(simTime * 1.3, 5));
+  const mag = P.wind * (P.species === 'bird' ? 2.0 : 0.45) * (1 + 0.35 * dn(simTime * 1.3, 5));
   return [Math.cos(az) * mag, 0, Math.sin(az) * mag];
 }
 const dn = (t, s) => 0.55 * Math.sin(t * 0.071 + s * 1.7) + 0.3 * Math.sin(t * 0.143 + s * 4.1) + 0.15 * Math.sin(t * 0.297 + s * 2.3);
@@ -2371,7 +2440,7 @@ function effective(dt){
   const sc = SCENES[preset.scene];
   const R0 = Math.cbrt((S ? S.N : count) * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5));
   const R = P.species === 'bird' ? R0 * 1.3 : sp.roostR;
-  homeR = (P.species === 'bird' ? Math.max(R0 * 3.5, 40) : sp.roostR) * (look.homeK || 1);
+  homeR = (P.species === 'bird' ? Math.max(R0 * 3.5, stats.spread * 2.4, 40) : sp.roostR) * (look.homeK || 1);
   const w = P.wander;
   roost = [R * w * (0.7 * Math.sin(t * 0.057) + 0.3 * Math.sin(t * 0.131 + 1)),
            sp.alt * (1 + (P.species === 'bird' ? 0.14 : 0.1) * Math.sin(t * 0.043)),
@@ -2422,7 +2491,7 @@ DG.f = DG.t.map((t) => fbo([t]));
 function densPass(){
   const sp = SP[P.species];
   const R0 = Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5));
-  const half = Math.max(R0 * 3.2, Math.min(stats.spread * 2.4, R0 * 6));
+  const half = Math.max(R0 * 3.2, Math.min(stats.spread * 2.4, R0 * (P.species === 'bird' ? 9 : 6)));
   DG.c = DG.c ? mix3(DG.c, stats.c, 0.15) : stats.c.slice();
   DG.cell = 2 * half / 32;
   DG.o = V3.sub(DG.c, [half, half, half]);
@@ -2464,6 +2533,9 @@ function simPass(dt, E){
   gl.uniform4f(CUR.u.uClick, click.p[0], click.p[1], click.p[2], ck > 0.02 ? ck : 0); u1f('uClickR', sp.fearR * 0.9 * P.fear);
   u3f('uRoost', roost); u1f('uRoostR', homeR); u1f('uWRoost', sp.wRoost * (P.species === 'fish' ? 1 + P.mill * 0.6 : 1) * Math.max(0.6, Math.min(2.4, P.speed * P.speed))); u1f('uWAlt', sp.wAlt); u1f('uMill', P.species === 'fish' ? P.mill : 0);
   u1f('uWind', E.wind); u1f('uWindScale', E.windScale);
+  { // the flock's home is wider across your view than along it, so it sweeps from side to side in front of you
+    const vf = cam.pos && cam.target ? [cam.target[0] - cam.pos[0], cam.target[2] - cam.pos[2]] : [0, 1], vl = Math.hypot(vf[0], vf[1]) || 1;
+    u3f('uViewF', [vf[0] / vl, vf[1] / vl, P.species !== 'bird' || P.view === 'ride' ? 0 : P.view === 'ground' ? 0.7 : 0.35]); }
   { const f = flowNow(); u3f('uFlowV', f); flowPos = V3.add(flowPos, V3.mul(f, dt)); }
   const H = hunters(), hp = new Float32Array(12), hv = new Float32Array(12), ht = new Float32Array(4);
   H.forEach((h, i) => { hp.set(h.p, i * 3); hv.set(h.v, i * 3); ht[i] = h.threat; });
@@ -2471,11 +2543,11 @@ function simPass(dt, E){
   u1f('uFearR', sp.fearR * P.fear); u1f('uFlee', sp.flee); u1f('uIndiv', P.indiv);
   const lure = P.cursor === 'lure' && toolHeld();
   u3f('uLurePos', pointer.world); u1f('uLure', lure ? 1 : 0);
-  u1f('uSheet', P.species === 'bird' ? P.sheet * Math.max(0, Math.min(1, 0.62 + 0.75 * dn(simTime * 0.9, 11))) : 0); u1f('uFlow', P.species === 'bird' ? 0.6 : 0); u1f('uQuiet', (stats.busy || 0) < 0.04 ? 1 : 0);
-  // how fast the flock may turn: the turn wave (about 23 m/s) should cross the flock before the first birds have turned half a radian
+  u1f('uSheet', P.species === 'bird' ? P.sheet * Math.max(0, Math.min(1, 0.62 + 0.75 * dn(simTime * 0.9, 11))) : 0); u1f('uThick', 0.28); u1f('uFlow', P.species === 'bird' ? 0.6 : 0.3 * Math.max(0, 1 - P.mill * 2.5)); u1f('uQuiet', (stats.busy || 0) < 0.04 ? 1 : 0);
+  // how fast the flock may turn: the turn wave (about 30 m/s) should cross the flock before the first birds have turned half a radian
   const wv = P.species === 'bird' ? stats.wave : null;
   gl.uniform4f(CUR.u.uWaveO, wv ? wv.o[0] : 0, wv ? wv.o[1] : 0, wv ? wv.o[2] : 0, wv ? wv.t0 : 0); u1f('uWaveCode', wv ? wv.code : -1);
-  u1f('uTurnRate', Math.max(0.12, Math.min(1.3, 0.6 * 23 / (2.6 * Math.max(stats.spread, 4)))));
+  u1f('uTurnRate', Math.max(0.12, Math.min(1.3, 0.6 * 30 / (2.6 * Math.max(stats.spread, 4)))));
   u1f('uExcite', P.panic); u1f('uThresh', 0.5); u1f('uRefract', 1.6); u1f('uWave', P.wave);
   u1f('uSpont', P.ripples / 60 * dt / S.N); u1f('uBlind', sp.blind);
   const sc = SCENES[preset.scene];
@@ -2701,7 +2773,7 @@ const VIEWS = ['orbit', 'ground', 'ride'];
 /* Controls. Quick ones sit at the top with a plain description; the rest live under Fine tuning, each with an info note. */
 const CTRL = [
   {g: 'gQuick', k: 'view', label: 'View', type: 'seg', options: [['orbit', 'Orbit'], ['ground', 'From the ground'], ['ride', 'Ride along']], on: onView,
-   desc: 'Orbit: circle the swarm (right-drag or two fingers to circle, scroll to come closer). From the ground: stand near the roost as the flock comes and goes. Ride along: fly behind one bird.'},
+   desc: 'Orbit: circle the swarm (drag to circle, scroll to come closer). From the ground: stand near the roost as the flock comes and goes. Ride along: fly behind one bird.'},
   {g: 'gQuick', k: 'camDrift', label: 'Camera drifts slowly around', type: 'toggle'},
   {g: 'gQuick', k: 'visitors', label: 'Wild hunters', min: 0, max: 3, step: 1, f: (v) => (+v === 0 ? 'none' : String(v)),
    desc: 'How many wild hunters may be about at once. They arrive now and then, hunt for a while and leave: falcons and hawks for starlings, sharks and tuna for fish.'},
@@ -2724,7 +2796,7 @@ const CTRL = [
   {g: 'gQuick', k: 'sunMoves', label: 'Let the sun move', type: 'toggle', only: 'bird'},
   {g: 'gQuick', k: 'notes', label: 'Field notes', type: 'toggle', global: true, info: 'A quiet line under the title that names what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.'},
   {g: 'gQuick', k: 'tour', label: 'Drift to new scenes when idle', type: 'toggle', global: true,
-   desc: 'After two quiet minutes it fades to a freshly generated scene every few minutes, like a screensaver. A scene you have adjusted or saved is left alone.'},
+   desc: 'After two quiet minutes it fades to a freshly generated scene every few minutes, like a screensaver: a new seed and any pairing of place and behaviour, starlings or fish. A scene you have adjusted or saved is given six minutes, and Back returns to it.'},
   {g: 'gQuick', k: 'power', label: 'Power use', type: 'seg', options: [['eco', 'Eco'], ['balanced', 'Balanced'], ['high', 'High']], global: true, on: setPower,
    desc: 'Eco runs at 30 frames a second with fewer birds, gentle on the GPU. High uses full resolution and the most birds.'},
 
@@ -2774,10 +2846,10 @@ function applyMacros(which){
   }
   if (which !== 'tight') {
     P.jitter = B.jitter * (0.3 + 1.4 * e);
-    P.initiate = B.initiate * (0.25 + 1.5 * e);
+    P.initiate = B.initiate * (0.55 + 0.9 * e);
     P.ripples = Math.round(B.ripples * (0.25 + 1.5 * e) * 2) / 2;
-    P.momentum = Math.max(0.15, Math.min(0.9, B.momentum * (1.4 - 0.8 * e)));
-    P.posSense = B.posSense * (0.7 + 0.6 * e);
+    P.momentum = Math.max(0.15, Math.min(0.9, B.momentum * (1.15 - 0.3 * e)));
+    P.posSense = B.posSense * (0.85 + 0.3 * e);
   }
 }
 const inputs = {};
@@ -2839,8 +2911,8 @@ function syncUI(){
   $('subtitle').textContent = preset.name + ' · ' + count.toLocaleString('en-US') + ' ' + SP[P.species].noun;
   $('seedLbl').textContent = 'seed ' + seedVal;
   syncTools();
-  $('hint').innerHTML = coarse ? 'One finger uses the tool · Two fingers look around · Pinch to zoom'
-    : 'Hold and drag to use the tool · Right-drag to look around · Scroll to zoom · <kbd>V</kbd> view · <kbd>H</kbd> hide';
+  $('hint').innerHTML = coarse ? 'Drag to look · Tap to act · Hold to grab · Pinch to zoom'
+    : 'Drag to look · Click to act · Hold to grab · Scroll to zoom · <kbd>V</kbd> view · <kbd>H</kbd> hide';
   syncSaver();
 }
 /* ---- levers: what the scene sets, what the seed draws, what you pinned ---- */
@@ -3165,20 +3237,32 @@ $('unpinBtn').addEventListener('click', () => { const was = Object.keys(pins); p
 /* screensaver drift: after a couple of idle minutes, fade to a freshly generated scene every few minutes */
 let lastInteract = performance.now(), lastTour = performance.now(), touring = false;
 ['pointerdown', 'keydown', 'wheel', 'input'].forEach((ev) => addEventListener(ev, () => { lastInteract = performance.now(); }, {passive: true, capture: true}));
+/* Left alone long enough, it moves on by itself: a new seed and a new scene drawn from every pairing of place and
+   behaviour, starlings and fish alike. A scene you adjusted, saved or built is given longer, and Back returns to it. */
+function tourPool(){
+  const out = [];
+  for (const pl in PLACES) for (const bh in BEHAVES) if (PLACES[pl].species === BEHAVES[bh].species) out.push(sceneFor(pl, bh));
+  for (const pr of PRESETS) if (Object.keys(pr.own).length) out.push(pr);
+  return out;
+}
 function tour(now){
-  if (touring || paused) return;
+  if (touring || paused || nextScene) return;
+  const mine = Object.keys(pins).length > 0 || !!currentSaved || !PRESETS.includes(preset);
   if (saverOn) { if (!saverCycle || now - lastTour < 180000) return; }      // a screensaver holds its scene unless it was asked to cycle
-  else if (!P.tour || now - lastInteract < 120000 || now - lastTour < 200000) return;
-  else if (Object.keys(pins).length || currentSaved || !PRESETS.includes(preset)) return;      // a scene you adjusted, saved or built stays put
+  else if (!P.tour || now - lastInteract < (mine ? 360000 : 120000) || now - lastTour < 200000) return;
   touring = true; lastTour = now;
   $('fade').classList.add('on');
   setTimeout(() => {
-    const pool = PRESETS.filter((p) => p.id !== preset.id && (p.species === 'bird' || Math.random() < 0.35));
+    if (mine && !saverOn) { try { history.pushState(null, '', location.href); } catch (e) {} }      // Back returns to the scene you made
+    const sp = Math.random() < 0.5 ? 'bird' : 'fish';
+    let pool = tourPool().filter((x) => x.species === sp && !(x.place === preset.place && x.behave === preset.behave));
+    if (!pool.length) pool = tourPool();
     seedVal = 1 + Math.floor(Math.random() * 999999);
-    applyPreset(pool[Math.floor(Math.random() * pool.length)].id);
+    pins = {}; currentSaved = ''; applyScene(pool[Math.floor(Math.random() * pool.length)]);
     setTimeout(() => { $('fade').classList.remove('on'); touring = false; }, 900);
   }, 1700);
 }
+addEventListener('popstate', () => { const st = parseState(location.search); if (st.any) { urlLive = true; applyState(st); } });
 function setPower(v){
   resetAuto();
   power = v; try { localStorage.setItem('murmur.power', v); } catch (e) {}
@@ -3191,45 +3275,61 @@ $('fsBtn').addEventListener('click', () => {
   } catch (e) { toast('Full screen is not available here.'); }
 });
 
-/* One scheme for mouse, pen and touch.
-   The first finger or the left button is the tool: hold (and drag) to chase with the hunter or to lure, tap or click for the
-   tool's one action. Everything else is the camera: two fingers on a touch screen (drag to look around, pinch to zoom); on a
-   mouse the right button, or the left with Shift; on a trackpad a two-finger swipe to look around and a pinch to zoom; the
-   scroll wheel zooms; the arrow keys look around. Nothing follows a pointer that is not pressed. */
+/* One scheme for mouse, pen, trackpad and touch, the one 3D viewers and maps use: drag looks, tap acts, hold grabs.
+   - Drag: look around. A wheel or a pinch zooms; two fingers do both at once; a two-finger swipe on a trackpad looks around.
+   - Tap or click: the tool's one action at that spot (dive, startle, release a hunter, inspect).
+   - Press and hold: take hold of the hunter or the lure, which then follows the pointer until you let go. With a mouse the
+     right button, or Shift with the left, takes hold at once.
+   - Three fingers tapped together: the next view. A right-click that does not move inspects, whatever the tool.
+   Nothing follows a pointer that is not pressed. */
 const touches = new Map();
-let gesture = null;
-const toolHeld = () => !!pointer.down && !pointer.down.look && !pointer.multi;
+let gesture = null, holdT = 0, tri = null;
+const HOLD_MS = 230, GRABS = {hunt: 1, lure: 1};      // how long a press takes to grab, and the tools that can be held
+const toolHeld = () => !!pointer.grab;
+function grab(){
+  const d = pointer.down; if (!d || d.moved || pointer.multi || pointer.grab) return;
+  pointer.grab = true; pointer.active = true; pointerRay();
+  canvas.classList.add('grabbing'); pointer.flick = null;
+  try { if (pointer.touch && navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+}
+function release(){ clearTimeout(holdT); pointer.grab = false; pointer.active = false; canvas.classList.remove('grabbing'); }
+function nextView(){ P.view = VIEWS[(VIEWS.indexOf(P.view) + 1) % 3]; onView(P.view); syncUI(); toast(P.view === 'ride' ? 'Riding along with one ' + (P.species === 'bird' ? 'bird' : 'fish') : P.view === 'ground' ? (P.species === 'bird' ? 'Watching from the ground' : 'Watching from one spot') : 'Circling the ' + (P.species === 'bird' ? 'flock' : 'school')); }
 function startGesture(){
   const [a, b] = [...touches.values()];
   const [yaw, pitch] = orbitNow();
   gesture = {cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, yaw, pitch, zoom: cam.zoom};
-  pointer.multi = true; pointer.down = null; pointer.active = false;
+  pointer.multi = true; pointer.down = null; release();
 }
 canvas.addEventListener('pointerdown', (e) => {
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
-  pointer.touch = e.pointerType === 'touch';
+  pointer.touch = e.pointerType === 'touch'; pointer.flick = null;
   if (pointer.touch) {
     touches.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (touches.size === 3) tri = {t: performance.now(), x: e.clientX, y: e.clientY, moved: false};
     if (touches.size >= 2) { startGesture(); return; }
   }
   if (pointer.multi) return;
   pointer.x = e.clientX; pointer.y = e.clientY;
   const [yaw, pitch] = orbitNow();
   const right = e.button === 2 || (e.button === 0 && e.ctrlKey);
-  const look = !pointer.touch && (right || e.button === 1 || e.shiftKey);
-  pointer.down = {x: e.clientX, y: e.clientY, t: performance.now(), moved: false, yaw, pitch, look, right};
-  pointer.active = !look;
-  if (!look) pointerRay();
+  pointer.down = {x: e.clientX, y: e.clientY, t: performance.now(), moved: false, yaw, pitch, right, mid: e.button === 1, lx: e.clientX, ly: e.clientY, lt: performance.now(), vx: 0, vy: 0};
+  clearTimeout(holdT);
+  if (GRABS[P.cursor] && e.button !== 1) {
+    if (right || e.shiftKey) grab();                             // the second button takes hold at once
+    else holdT = setTimeout(grab, HOLD_MS);
+  }
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+const lookK = () => P.view === 'ground' ? [0.005, -0.0025] : [0.005, 0.004];
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'touch') {
     if (touches.has(e.pointerId)) touches.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (tri && Math.hypot(e.clientX - tri.x, e.clientY - tri.y) > 60) tri.moved = true;
     if (gesture && touches.size >= 2) {
       const [a, b] = [...touches.values()];
-      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-      setOrbit(gesture.yaw - (cx - gesture.cx) * 0.007, gesture.pitch + (P.view === 'ground' ? -(cy - gesture.cy) * 0.0035 : (cy - gesture.cy) * 0.006));
-      cam.zoom = Math.max(0.3, Math.min(3, gesture.zoom * gesture.d / d));
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, d = Math.hypot(a.x - b.x, a.y - b.y) || 1, k = lookK();
+      setOrbit(gesture.yaw - (cx - gesture.cx) * k[0] * 1.3, gesture.pitch + (cy - gesture.cy) * k[1] * 1.3);
+      cam.zoom = clampZoom(gesture.zoom * gesture.d / d);
       return;
     }
     if (pointer.multi) return;
@@ -3238,20 +3338,27 @@ canvas.addEventListener('pointermove', (e) => {
   if (!d) return;
   pointer.x = e.clientX; pointer.y = e.clientY;
   const dx = e.clientX - d.x, dy = e.clientY - d.y;
-  if (!d.moved && Math.hypot(dx, dy) > (pointer.touch ? 10 : 6)) d.moved = true;
-  if (d.look && d.moved) { canvas.classList.add('dragging'); setOrbit(d.yaw - dx * 0.005, d.pitch + (P.view === 'ground' ? -dy * 0.0025 : dy * 0.004)); }
+  if (!d.moved && Math.hypot(dx, dy) > (pointer.touch ? 10 : 5)) { d.moved = true; if (!pointer.grab) clearTimeout(holdT); }
+  if (pointer.grab || !d.moved) return;                          // held: the tool follows the pointer
+  canvas.classList.add('dragging');
+  const k = lookK(), now = performance.now(), dtm = Math.max(1, now - d.lt);
+  d.vx = 0.6 * d.vx + 0.4 * (e.clientX - d.lx) / dtm * 1000; d.vy = 0.6 * d.vy + 0.4 * (e.clientY - d.ly) / dtm * 1000; d.lx = e.clientX; d.ly = e.clientY; d.lt = now;
+  setOrbit(d.yaw - dx * k[0], d.pitch + dy * k[1]);
 });
 const endPointer = (e, cancelled) => {
   if (e.pointerType === 'touch') {
     touches.delete(e.pointerId);
     if (touches.size < 2) gesture = null;
-    if (pointer.multi) { if (touches.size === 0) pointer.multi = false; pointer.down = null; pointer.active = false; return; }
+    if (tri && touches.size === 0) { if (!cancelled && !tri.moved && performance.now() - tri.t < 500) nextView(); tri = null; }
+    if (pointer.multi) { if (touches.size === 0) pointer.multi = false; pointer.down = null; release(); return; }
   }
-  const d = pointer.down; pointer.down = null; pointer.active = false; canvas.classList.remove('dragging');
+  const d = pointer.down, held = pointer.grab; pointer.down = null; release(); canvas.classList.remove('dragging');
   if (cancelled || !d) return;
-  const quick = !d.moved && performance.now() - d.t < 400;
-  if (d.look) { if (d.right && quick) { pointerRay(); doInspect(); } return; }   // a right-click that did not drag inspects, whatever the tool
-  if (quick) { pointerRay(); useTool(e); }
+  if (d.right) { if (!d.moved && performance.now() - d.t < 400) { pointerRay(); doInspect(); } return; }      // a right-click that did not drag inspects
+  if (d.mid) return;
+  if (!d.moved && !held) { pointerRay(); useTool(e); return; }   // a tap or a click
+  // let go of a moving look-drag and the view carries on a little, easing to rest
+  if (d.moved && !held && performance.now() - d.lt < 90) { const k = lookK(), cap = (v) => Math.max(-1.1, Math.min(1.1, v)); pointer.flick = {yaw: cap(-d.vx * k[0]), pitch: cap(d.vy * k[1]) * 0.6}; }
 };
 canvas.addEventListener('pointerup', (e) => endPointer(e, false));
 canvas.addEventListener('pointercancel', (e) => endPointer(e, true));
@@ -3259,9 +3366,9 @@ document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 /* ---- tools: what a click does ---- */
 const TOOL_HINT = {
-  hunt:    ['Hold and drag to chase with the {h}, click to dive', 'Hold and drag to chase with the {h}, tap to dive'],
+  hunt:    ['Click to send the {h} diving in · hold, or right-drag, and it chases your pointer', 'Tap to send the {h} diving in · press and hold, and it chases your finger'],
   startle: ['Click near the {n} to startle them', 'Tap near the {n} to startle them'],
-  lure:    ['Hold and drag: the {n} follow your pointer', 'Hold and drag: the {n} follow your finger'],
+  lure:    ['Hold, or right-drag: the {n} follow your pointer', 'Press and hold: the {n} follow your finger'],
   spawn:   ['Click to release a wild {w} there', 'Tap to release a wild {w} there'],
   inspect: ['Click a {one} or a hunter to see it up close', 'Tap a {one} or a hunter to see it up close'],
 };
@@ -3270,7 +3377,7 @@ function syncTools(){
   const bird = P.species === 'bird';
   const t = (TOOL_HINT[P.cursor] || TOOL_HINT.hunt)[coarse ? 1 : 0]
     .replace('{h}', bird ? 'falcon' : 'shark').replace('{n}', bird ? 'birds' : 'fish').replace('{w}', bird ? 'hawk or falcon' : 'shark or tuna').replace('{one}', bird ? 'bird' : 'fish');
-  $('toolHint').textContent = t + (coarse ? ' · two fingers to look around, pinch to zoom' : ' · right-drag or two-finger swipe to look around');
+  $('toolHint').textContent = t + (coarse ? ' · drag to look around, pinch to zoom' : ' · drag to look around, scroll to zoom');
 }
 document.querySelectorAll('.tool-row button').forEach((b) => b.addEventListener('click', () => { P.cursor = b.dataset.tool; syncTools(); }));
 function useTool(){
@@ -3402,8 +3509,8 @@ canvas.addEventListener('wheel', (e) => {
   const now = performance.now();
   if (now - wheelState.t > 160) wheelState.pad = e.wheelDeltaY != null ? e.wheelDeltaY === -3 * e.deltaY && e.wheelDeltaX === -3 * e.deltaX : e.deltaMode === 0;
   wheelState.t = now;
-  if (e.ctrlKey) { cam.zoom = Math.max(0.3, Math.min(3, cam.zoom * Math.exp(e.deltaY * 0.01))); return; }                       // trackpad pinch
-  if (!wheelState.pad && !e.shiftKey) { cam.zoom = Math.max(0.3, Math.min(3, cam.zoom * Math.exp(e.deltaY * 0.0012))); return; }   // mouse wheel
+  if (e.ctrlKey) { cam.zoom = clampZoom(cam.zoom * Math.exp(e.deltaY * 0.01)); return; }                       // trackpad pinch
+  if (!wheelState.pad && !e.shiftKey) { cam.zoom = clampZoom(cam.zoom * Math.exp(e.deltaY * 0.0012)); return; }   // mouse wheel
   const [yaw, pitch] = orbitNow();
   const dx = e.shiftKey && !wheelState.pad ? e.deltaY || e.deltaX : e.deltaX, dy = e.shiftKey && !wheelState.pad ? 0 : e.deltaY;
   setOrbit(yaw + dx * 0.0035, pitch + (P.view === 'ground' ? dy * 0.0018 : -dy * 0.003));
@@ -3414,14 +3521,14 @@ addEventListener('keydown', (e) => {
   if (e.target.closest && e.target.closest('input,select,textarea')) return;
   if (e.key.startsWith('Arrow')) { e.preventDefault(); const [yaw, pitch] = orbitNow(), g = P.view === 'ground' ? -0.5 : 1; setOrbit(yaw + (e.key === 'ArrowLeft' ? -0.09 : e.key === 'ArrowRight' ? 0.09 : 0), pitch + (e.key === 'ArrowUp' ? -0.06 * g : e.key === 'ArrowDown' ? 0.06 * g : 0)); }
   else if (e.key === '+' || e.key === '=') cam.zoom = Math.max(0.3, cam.zoom * 0.88);
-  else if (e.key === '-' || e.key === '_') cam.zoom = Math.min(3, cam.zoom * 1.14);
+  else if (e.key === '-' || e.key === '_') cam.zoom = clampZoom(cam.zoom * 1.14);
   else if (e.key === 's' || e.key === 'S') setSaver(true);
   else if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('ui-hidden');
   else if (e.key === ' ') { e.preventDefault(); $('pauseBtn').click(); }
   else if (e.key === 'f' || e.key === 'F') $('fsBtn').click();
   else if (e.key === 'r' || e.key === 'R') reseed();
   else if (e.key === 'n' || e.key === 'N') freshSky();
-  else if (e.key === 'v' || e.key === 'V') { P.view = VIEWS[(VIEWS.indexOf(P.view) + 1) % 3]; onView(P.view); syncUI(); toast(P.view === 'ride' ? 'Riding along with one ' + (P.species === 'bird' ? 'bird' : 'fish') : P.view === 'ground' ? 'From the ground' : 'Orbit'); }
+  else if (e.key === 'v' || e.key === 'V') nextView();
   else if (/^[0-9]$/.test(e.key)) pickScene(PRESETS[(+e.key + 9) % 10]);
 });
 addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== preset.id && PRESETS.some((p) => p.id === id)) pickScene(PRESETS.find((p) => p.id === id)); });
