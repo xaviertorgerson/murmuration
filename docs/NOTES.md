@@ -19,6 +19,8 @@ Nothing below was tuned by eye alone. `tools/flock-metrics.js` reads the simulat
   seeds and sizes, not one.
 - **Looking.** `__fm.strip(n, gap, cols)` draws a contact sheet over the page; a screenshot of that shows a
   minute of flight in one picture. The ground view is the photographer's view.
+- **Against film.** `tools/silhouette-metrics.js` takes the silhouette statistics that were taken from
+  film (`__sil.REF`) from the simulation: `__sil.run(40)` after a 15-second settle.
 
 ## Starlings: what went wrong and why
 
@@ -45,13 +47,34 @@ Nothing below was tuned by eye alone. `tools/flock-metrics.js` reads the simulat
    below it.
 10. **Two sheets flying side by side for ever.** The gentle pull to the common centre must never be
     switched off entirely.
+11. **A startle that never became a wave.** Four faults at once. A bird took a quarter of a second to
+    pass the alarm on, so the front crept at 5 m/s and broke up. A tap startled every bird within 20 m in
+    the same instant, a blob and not a band. A startle that began by itself added less than the threshold
+    in one frame, so it never fired at 60 frames a second. And a bird was ready to fire again after 1.6 s,
+    sooner than the wave could leave a big flock, so broken fronts came round again and a few percent of
+    the birds stayed alarmed for ever. Fix: 0.1 s to pass it on (about 15 m/s); only the birds at the spot
+    are startled outright; a startle that begins by itself fires outright; a bird ignores the alarm for
+    as long as the wave needs to cross the flock (`uRefract`, from the flock's spread). Check with the
+    share of birds whose pulse is above 0.2, every 0.2 s after `__murmur.startleFlock()`: it should rise,
+    travel outward and reach zero, and nearly every bird should have fired once.
+12. **The alarm band read pale from below and not at all from the side.** The roll that makes the band in
+    real flocks turns the wing toward some watchers and edge-on to others, and a bird two pixels across
+    shows neither. Fix: far birds are drawn darker and a little larger while the pulse passes; near birds
+    show the roll itself. The bunching that was added earlier to darken the band is still there but is no
+    longer what makes it visible; it tore the sheet when it was strong, so do not raise it.
 
 ## Starlings: the target, from Søren Solkær's Black Sun photographs
 
 A veil a bird or two thick and many times wider; dark and pale are the same sheet edge-on and face-on;
 folds and dark-rimmed bulbs; dark lines where birds bunch as alarm passes; at times a tight ball; a thin
-streamer of birds catching up. The build reaches a slab about 1 : 3 : 6 that swings between sheet and
-ball. It does not yet fold over itself or show clear lines of condensation.
+streamer of birds catching up. The build reaches a slab about 1 : 2.5 : 5.5 that swings between sheet and
+ball, crossed by a dark band when it is startled. It does not fold over itself.
+
+Against film (`tools/silhouette-metrics.js`, four clips): proportions and wholeness match; the simulated
+flock is darker (median 0.27 to 0.45 against 0.13 to 0.22), rounder in outline (area over hull 0.85 to
+0.95 against 0.69 to 0.78) and changes shape half as fast (0.13 to 0.28 of the outline a second against
+0.43 to 0.46). Restlessness at 0.75 or 1 raised the change rate only in the runs where the flock also
+divided, so the default stayed. Arms, bays and faster change are the next thing to earn.
 
 ## Fish
 
@@ -79,12 +102,15 @@ before and after; exact positions will differ (the shader is recompiled), statis
   turn's rate. Shorten the crossing time or the angle, not the rate.
 - A seed draws the flight levers from a clipped bell curve (`VARY`). The corners were flown and are safe.
 - **The sweep.** Both ends of every flight lever were flown for a simulated minute per species (92 runs).
-  Starlings: 42 of 46 ends stayed one flock; the four that did not (Spacing at its minimum, Edge pull,
-  Wind and Alarm wave at their maximum) were pulled in, in `LIMIT`, and flown again. Fish: no end packed,
+  Starlings: 42 of 46 ends stayed one flock; the four that did not (Personal space at its minimum, Pull
+  at the edges, Wind and Escape strength at their maximum) were pulled in, in `LIMIT`, and flown again. Fish: no end packed,
   froze or scattered the school; it divides and rejoins at any setting, as it does at the defaults, so
   nothing was pulled in. One run per end is noisy: an end that splits under a quarter of the time is not
   evidence of anything.
 - A slider's range is `LIMIT` for the current species; links and saved scenes are clamped to it.
+- After the alarm became a travelling band the levers that feed it were flown again at their maximum:
+  Escape strength, Panic spread and Startles per minute each whole; the three together split 5% of the
+  time; Restlessness whole in three 70-second runs, and in two three-minute runs divided for 7 seconds in all.
 
 ## Cost (Apple M5, 1.5 million pixels)
 
@@ -100,6 +126,6 @@ follows the flock's size. Zoom-out stops where a bird would fall under about a p
 
 ## Open
 
-- Folds in the veil; the lines of condensation are faint.
-- Terrain for the starling places. Nothing in them reaches display height, so it would be scenery only.
+- Folds in the veil; arms and bays in its outline; a faster change of shape (see the film comparison).
+- Something for starlings to fly around. The marsh under the reed beds is ground only.
 - Safari, Firefox, real phones and trackpads.
