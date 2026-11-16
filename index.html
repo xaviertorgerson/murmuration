@@ -604,15 +604,16 @@ void main(){
   // body flying alongside does not) and where it is going. A starling outside it flies back: fast from far off, at a
   // closing speed that falls with the distance left, so it arrives beside the flock instead of shooting through it, and
   // already flying the flock's way. If a large part has come away, the main body leans toward it and slows to be caught.
-  float wR = 0.0;
+  float wR = 0.0, vJoin = 0.0;
   if (uSpecies == 0) {
     vec3 dmn = p - uMain; float mah = sqrt(max(dot(dmn, uMainInv * dmn), 1e-6));
     wR = smoothstep(2.6, 3.4, mah);
     if (wR > 0.0) {
       float gapM = length(dmn) * (1.0 - 2.2 / mah);
       vec3 aim = uMain + dmn * (2.2 / mah) + uMainVel * clamp(gapM / max(uSpeed, 1.0), 0.0, 2.5) - p;
-      vec3 pull = (uMainVel + aim / (length(aim) + 1e-3) * min(gapM * 0.5, uSpeed * 1.2) - v) * 1.6;
-      float pl = length(pull); if (pl > 10.0) pull *= 10.0 / pl;
+      vec3 vWant = uMainVel + aim / (length(aim) + 1e-3) * min(gapM * 0.5, uSpeed * 1.2);
+      vJoin = length(vWant);
+      vec3 pull = (vWant - v) * 1.6; float pl = length(pull); if (pl > 10.0) pull *= 10.0 / pl;
       acc += pull * wR;
     } else if (uOther.w > 0.1) {
       vec3 d2 = uOther.xyz - p; acc += d2 / (length(d2) + 1e-3) * 3.0 * smoothstep(0.1, 0.35, uOther.w);
@@ -752,7 +753,10 @@ void main(){
   float turnA = clamp(length(steer) / (uSpeed * 1.1), 0.0, 1.0);
   vT *= 1.0 - 0.025 * turnA;                                                       // banking bleeds a little speed
   vT *= 1.0 + 0.1 * alarm + 0.25 * fear;
-  if (uSpecies == 0) vT *= 1.0 + 0.4 * wR - 0.22 * (1.0 - wR) * smoothstep(0.1, 0.35, uOther.w) + 0.1 * clamp(dot(uCenter - p, fwd) / (2.0 * uSpread), -1.0, 1.0);      // a bird out of the flock sprints back, and a flock that has lost a large part slows for it
+  if (uSpecies == 0) {
+    vT *= 1.0 - 0.22 * (1.0 - wR) * smoothstep(0.1, 0.35, uOther.w) + 0.1 * clamp(dot(uCenter - p, fwd) / (2.0 * uSpread), -1.0, 1.0);      // a flock that has lost a large part slows for it
+    vT = mix(vT, clamp(vJoin, uSpeed * 0.7, uSpeed * 1.45), wR);      // a bird out of the flock sprints back, and eases to the flock's own pace as it arrives
+  }
   float dv = vT - spd;
   float thrust = dv * 1.2;                                                         // birds hold their pace, with room for surges to roll through
   if (uSpecies == 0) thrust -= 9.8 * fwd.y * 0.18;                                 // climbing costs a little speed, diving gains some
@@ -1774,10 +1778,11 @@ const BASE = {
          speedMatch: 0.55, posSense: 1, initiate: 0.8, sheet: 0,
          cursor: 'hunt', fear: 1, panic: 1, ripples: 1.5, wave: 1, visitors: 1, indiv: 0.8, showHunter: true,
          wind: 0.45, turbulence: 0.5, drift: 0.2, wander: 0.6,
-         tod: 0.45, sunMoves: false, clouds: 0.5, mist: 0, ink: '#2c4a5e', exposure: 1.05, bloom: 0.9, shafts: 1, haze: 0.6, grain: 0.12, shadow: 1, sheen: 1, detail: true},
+         tod: 0.45, sunMoves: true, clouds: 0.5, mist: 0, ink: '#2c4a5e', exposure: 1.05, bloom: 0.9, shafts: 1, haze: 0.6, grain: 0.12, shadow: 1, sheen: 1, detail: true},
 };
 /* A scene is three independent choices: a species, a place (the backdrop and its light) and a behaviour (how the flock flies).
-   The built-in scenes are named combinations of the three; `p` on a scene is anything it sets beyond its place and behaviour. */
+   The built-in scenes are named combinations of the three; `p` on a scene is anything it sets beyond its place and behaviour.
+   A behaviour sets levers (`p`) and where the two dials, Tightness and Restlessness, sit before the seed moves them (`dial`). */
 const PLACES = {
   dusk:   {name: 'Reed beds', species: 'bird', p: {tod: 0.42}},
   lake:   {name: 'Still lake', species: 'bird', p: {tod: 0.5, clouds: 0.45, mist: 0.8}},
@@ -1791,6 +1796,10 @@ const PLACES = {
 };
 const BEHAVES = {
   roost:  {name: 'Evening roost', species: 'bird', p: {}},
+  veil:   {name: 'Wide veil', species: 'bird', dial: {tight: 0.25, energy: 0.35}, p: {sheet: 1}},
+  ball:   {name: 'Tight ball', species: 'bird', dial: {tight: 0.8, energy: 0.55}, p: {sheet: 0.45}},
+  restless: {name: 'Restless', species: 'bird', dial: {energy: 0.8}, p: {}},
+  gale:   {name: 'Into the wind', species: 'bird', dial: {energy: 0.6}, p: {wind: 0.95, turbulence: 0.85}},
   jumpy:  {name: 'On edge', species: 'bird', p: {panic: 1.35, fear: 1.4, wave: 1.25, ripples: 5, momentum: 0.7, initiate: 1.6, visitors: 2}},
   school: {name: 'Travelling school', species: 'fish', p: {}},
   mill:   {name: 'Milling ring', species: 'fish', u: 0.06, pitch: 0.38, p: {mill: 1.0, alignment: 1.3, cohesion: 0.8, wander: 0.2, edge: 0.3}},
@@ -1799,14 +1808,14 @@ const BEHAVES = {
 function makeScene(d){
   const pl = PLACES[d.place], bh = BEHAVES[d.behave];
   return {id: d.id || 'custom', name: d.name || pl.name + ', ' + bh.name.toLowerCase(), note: d.note || '', species: pl.species, scene: d.place, place: d.place, behave: d.behave,
-          u: bh.u, pitch: bh.pitch, own: d.p || {}, p: Object.assign({}, pl.p, bh.p, d.p)};
+          u: bh.u, pitch: bh.pitch, dial: bh.dial || {}, own: d.p || {}, p: Object.assign({}, pl.p, bh.p, d.p)};
 }
 const PRESETS = [
   {id: 'golden-dusk', name: 'Golden Dusk', note: 'Sun low over the reeds', place: 'dusk', behave: 'roost'},
-  {id: 'still-lake', name: 'Still Lake', note: 'Mirror water, wooded shore', place: 'lake', behave: 'roost'},
-  {id: 'sea-sunset', name: 'Sea Sunset', note: 'Pink sky, sun on the water', place: 'sea', behave: 'roost'},
-  {id: 'alpine-glow', name: 'Alpine Glow', note: 'Peaks catch the last light', place: 'alpine', behave: 'roost'},
-  {id: 'desert-dusk', name: 'Desert Dusk', note: 'Dunes under a clear sky', place: 'desert', behave: 'roost'},
+  {id: 'still-lake', name: 'Still Lake', note: 'A wide veil over mirror water', place: 'lake', behave: 'veil'},
+  {id: 'sea-sunset', name: 'Sea Sunset', note: 'Leaning into the sea wind', place: 'sea', behave: 'gale'},
+  {id: 'alpine-glow', name: 'Alpine Glow', note: 'A tight ball under the peaks', place: 'alpine', behave: 'ball'},
+  {id: 'desert-dusk', name: 'Desert Dusk', note: 'Wheeling over the dunes', place: 'desert', behave: 'restless'},
   {id: 'blue-hour', name: 'Blue Hour', note: 'After sunset, first stars', place: 'lake', behave: 'roost', p: {tod: 0.93, clouds: 0.3, mist: 0.6, ink: '#16141b', bloom: 0.5, ripples: 1, exposure: 1.3, sunMoves: false}},
   {id: 'falcon-hour', name: 'Falcon Hour', note: 'Jumpy flock, bold hunter', place: 'dusk', behave: 'jumpy', p: {tod: 0.55}},
   {id: 'open-ocean', name: 'Open Ocean', note: 'A school on the move', place: 'ocean', behave: 'school'},
@@ -2286,7 +2295,7 @@ const KINDS = {
 };
 function makeHunter(kind, p, user){
   return {kind, user: !!user, p: p.slice(), v: [1, 0, 0], roll: 0, stoop: 0, dir: [0, 0, -1], threat: 0, vis: user ? 0 : 0.01, fold: 0,
-          state: user ? 'idle' : 'arrive', t: 0, life: 35 + rng() * 45, next: simTime + 4 + rng() * 6,
+          state: user ? 'idle' : 'arrive', t: 0, life: KINDS[kind].species === 'bird' ? 22 + rng() * 18 : 35 + rng() * 45, next: simTime + 4 + rng() * 6,
           ang: rng() * 6.283, phase: rng() * 6.283, exit: V3.norm([rng() - 0.5, 0, rng() - 0.5]), off: [0, 0, 0]};
 }
 const pred = makeHunter('peregrine', [300, 160, 300], true);
@@ -2412,7 +2421,8 @@ function updatePred(dt){
     const a = rng() * 6.283, dir = [Math.cos(a), 0, Math.sin(a)];
     const from = V3.add(stats.c, V3.add(V3.mul(dir, bird ? 420 : 80), [0, bird ? 140 : 0, 0]));
     for (let i = 0; i < n; i++) wild.push(makeHunter(kind, V3.add(from, [i * 6, i * 3, -i * 6]), false));
-    nextVisit = simTime + 25 + rng() * 40;
+    // (starlings: a hunter is an event. It comes, makes a few passes and goes, and the flock has a minute or two to itself)
+    nextVisit = bird ? simTime + wild[wild.length - 1].life + 70 + rng() * 80 : simTime + 25 + rng() * 40;
   }
   // too many (the setting was lowered): the newest leave first
   for (let i = want; i < wild.length; i++) wild[i].state = 'leave';
@@ -2627,6 +2637,14 @@ function setSkyUniforms(){
   return sun;
 }
 const LIGHT_DIR = V3.norm([0.25, 1.0, -0.4]);
+/* Under water the sun moves too (Let the sun move): it swings across the surface and climbs and sinks over a few minutes, so
+   the shafts lean and sweep, the shadows inside the school shift and the water warms a little while it is low. */
+let lightT = 0;
+function waterLight(){
+  if (!P.sunMoves) return {dir: LIGHT_DIR, warm: 0};
+  const a = lightT * 2 * Math.PI / 250, az = 0.56 + 0.95 * Math.sin(a), el = 1.02 + 0.3 * Math.cos(a * 0.63 + 0.8);
+  return {dir: [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)], warm: Math.max(0, Math.min(1, (1.0 - el) / 0.28))};
+}
 
 /* flock light map: how much of the flock lies between each bird and the sun (or the bright surface above the fish) */
 const OP_RES = 128;
@@ -2636,7 +2654,7 @@ op.B = tex(OP_RES, OP_RES, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR, null);
 op.f = fbo([op.A, op.B]);
 function opacityPass(){
   const sc = SCENES[preset.scene], sp = SP[P.species];
-  const L = sc.kind === 'sky' ? sunDir() : LIGHT_DIR;
+  const L = sc.kind === 'sky' ? sunDir() : waterLight().dir;
   const X = V3.norm(V3.cross([0, 1, 0], L)), Y = V3.cross(L, X);
   op.L = L; op.X = X; op.Y = Y;
   op.c = mix3(op.c, stats.c, 0.08);
@@ -2658,7 +2676,7 @@ function render(){
   pal = skyPalette(sunEl(P.tod));
   const W = canvas.width, H = canvas.height;
   const pxScale = H / (2 * Math.tan(cam.fov / 2));
-  const wTop = sky ? null : lin(sc.top), wDeep = sky ? null : lin(sc.deep), lightCol = sky ? null : lin(sc.light);
+  const wTop = sky ? null : lin(sc.top), wDeep = sky ? null : lin(sc.deep), wl = sky ? null : waterLight(), lightCol = sky ? null : V3.mul(lin(sc.light).map((c, i) => c * (1 - wl.warm * [0, 0.12, 0.3][i])), 1 - 0.12 * wl.warm);
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, RT.msFBO); gl.viewport(0, 0, W, H);
   gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -2675,7 +2693,7 @@ function render(){
   u1f('uCloud', Math.max(0, Math.min(1, P.clouds + 0.18 * Math.sin(simTime * 0.006 + seedVal))));
   let sun = setSkyUniforms();
   if (!sky) {
-    u3f('uWTop', wTop); u3f('uWDeep', wDeep); u3f('uSand', lin(sc.sand)); u3f('uLightDir', LIGHT_DIR); u3f('uLightCol', lightCol);
+    u3f('uWTop', wTop); u3f('uWDeep', wDeep); u3f('uSand', lin(sc.sand)); u3f('uLightDir', wl.dir); u3f('uLightCol', lightCol);
     u1f('uFloor', sc.floor); u1f('uFog', sc.fog * (0.4 + P.haze));
   }
   u1i('uObst', sc.obst || 0); uM4('uVP', cam.VP);
@@ -2720,7 +2738,7 @@ function render(){
     setSkyUniforms(); u3f('uInk', lin(P.ink)); u1f('uHaze', 0.0011 * P.haze); u1f('uSunVis', sunVisible());
   } else {
     u3f('uBack', lin(P.ink)); u3f('uBelly', lin('#e4ecee')); u3f('uWTop', wTop); u3f('uWDeep', wDeep);
-    u3f('uLightDir', LIGHT_DIR); u3f('uLightCol', lightCol); u1f('uFog', sc.fog * (0.4 + P.haze));
+    u3f('uLightDir', wl.dir); u3f('uLightCol', lightCol); u1f('uFog', sc.fog * (0.4 + P.haze));
   }
   gl.bindVertexArray(mesh.vao);
   u1i('uStride', 1); u1i('uMirror', 0); u1f('uReflK', 1);
@@ -2768,7 +2786,7 @@ function render(){
     use(PR.down); uTex('uSrc', 0, src); u2f('uTexel', 0.5 / sw, 0.5 / sh); u1f('uThresh', sc.thresh); u1i('uFirst', i === 0 ? 1 : 0);
     fullscreen();
     if (i === 0) {
-      const lp = project(cam.VP, V3.add(cam.pos, V3.mul(sky ? sun : LIGHT_DIR, 1000)));
+      const lp = project(cam.VP, V3.add(cam.pos, V3.mul(sky ? sun : wl.dir, 1000)));
       let k = lp.w > 0 ? 1 : 0;
       const m = Math.max(Math.abs(lp.x), Math.abs(lp.y));
       k *= Math.max(0, Math.min(1, (4.0 - m) / 2.5));
@@ -2801,7 +2819,7 @@ const look = {seed: [0, 0], homeK: 1};
 /* each seed draws its own flock size around the chosen size (a log-normal spread, within limits) */
 function drawCount(){
   const u = Math.max(1e-6, rng()), v = rng(), g = Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2831853 * v);
-  const c = Math.round(baseCount * AUTO.k * Math.pow(2, 0.45 * Math.max(-1, Math.min(2, g))) / 256) * 256;
+  const c = Math.round(baseCount * AUTO.k * Math.pow(2, 0.6 * Math.max(-1.2, Math.min(1.6, g))) / 256) * 256;
   // (a milling school needs enough fish to close its ring, so fish never drop below 6,144)
   return Math.max(P.species === 'fish' ? Math.min(6144, baseCount) : 2048, Math.min(65536, Math.min(baseCount * 2, c)));
 }
@@ -2814,9 +2832,9 @@ function newSky(keepTime){
     if (P.species === 'bird') P.clouds = Math.max(0, Math.min(1, B.clouds + (rng() - 0.5) * 0.45));
     look.homeK = j(0.8, 1.25);
   }
-  cloudT = rng() * 600;
+  cloudT = rng() * 600; lightT = rng() * 250;
   P.sunAz = (rng() - 0.5) * 0.9;
-  if (!keepTime && P.species === 'bird' && preset.p.tod != null) P.tod = Math.max(0.05, Math.min(0.97, preset.p.tod + (rng() - 0.5) * 0.12));
+  if (!keepTime && P.species === 'bird' && preset.p.tod != null) P.tod = Math.max(0.05, Math.min(0.97, preset.p.tod + (rng() - 0.5) * (preset.own.tod != null ? 0.08 : 0.24)));
 }
 
 /* =====================================================================
@@ -2851,7 +2869,7 @@ const CTRL = [
    desc: 'Cruising pace. Birds still surge and ease off around it.'},
   {g: 'gQuick', k: 'tod', label: 'Time of day', min: 0, max: 1, step: 0.005, only: 'bird', f: (v) => { const e = sunEl(+v); return 'sun ' + (e >= 0 ? '+' : '−') + Math.abs(e).toFixed(0) + '°'; },
    desc: 'Where the sun sits, from late afternoon to after dark.'},
-  {g: 'gQuick', k: 'sunMoves', label: 'Let the sun move', type: 'toggle', only: 'bird'},
+  {g: 'gQuick', k: 'sunMoves', label: 'Let the sun move', type: 'toggle', info: 'Over a few minutes the sun sets and comes back up, or under water swings across the surface, so the light keeps changing.'},
   {g: 'gQuick', k: 'notes', label: 'Field notes', type: 'toggle', global: true, info: 'A quiet line under the title that names what is happening as it happens: a turn sweeping the flock, a falcon arriving, the flock balling up.'},
   {g: 'gQuick', k: 'tour', label: 'Drift to new scenes when idle', type: 'toggle', global: true,
    desc: 'After two quiet minutes it fades to a freshly generated scene every few minutes, like a screensaver: a new seed and any pairing of place and behaviour, starlings or fish. A scene you have adjusted or saved is given six minutes, and Back returns to it.'},
@@ -2977,13 +2995,18 @@ function syncUI(){
 let pins = {};                 // levers you moved yourself: they keep your value through a reseed
 let seedP = {};                // what the scene and the seed chose, before your pins
 const varietyUser = {};        // how much a seed may change the way the flock flies, per species; unset is the species' default
-const variety = () => varietyUser[preset.species] != null ? varietyUser[preset.species] : (preset.species === 'bird' ? 0.5 : 0);
+const variety = () => varietyUser[preset.species] != null ? varietyUser[preset.species] : 0.5;
 const NOPIN = new Set(['view', 'tour', 'power', 'count', 'variety', 'notes']);
 const MACRO = {tight: ['cohesion', 'space', 'edge', 'speedMatch'], energy: ['jitter', 'initiate', 'ripples', 'momentum', 'posSense']};
-/* What a seed may move, and how far: [spread at full variety, lowest, highest]. Tightness and Restlessness are dials from 0 to 1
-   that carry their linked levers with them (applyMacros); the others multiply the scene's own value. Draws are bell-shaped
-   and clipped, so no seed lands outside these limits, or outside a slider's own range. */
-const VARY = {tight: [0.16, 0.2, 0.8], energy: [0.16, 0.2, 0.8], alignment: [0.10, 0.8, 1.25], wander: [0.15, 0.7, 1.4], speed: [0.05, 0.9, 1.12], fear: [0.10, 0.8, 1.3], wave: [0.10, 0.8, 1.25]};
+/* What a seed may move, and how far: [reach at full variety, lowest, highest]. Tightness and Restlessness are dials from
+   0 to 1 that carry their linked levers with them (applyMacros); a seed places each anywhere within its reach of where the
+   behaviour sets it, so two seeds of one scene are visibly different flocks. The others multiply the scene's own value,
+   bell-shaped. Nothing lands outside these limits, which are inside what was flown, or outside a slider's own range.
+   Fish are moved less: their schools were tuned by eye and a seed should not undo that. */
+const VARY = {
+  bird: {tight: [0.5, 0.2, 0.8], energy: [0.5, 0.2, 0.8], alignment: [0.2, 0.8, 1.25], wander: [0.3, 0.7, 1.4], speed: [0.08, 0.9, 1.12], fear: [0.2, 0.8, 1.3], wave: [0.15, 0.8, 1.25]},
+  fish: {tight: [0.3, 0.3, 0.7], energy: [0.3, 0.3, 0.7], wander: [0.25, 0.75, 1.3], speed: [0.06, 0.92, 1.1]},
+};
 /* How far each lever may go. A slider's range is the range that was flown and stayed a flock: both ends of every flight
    lever were run for a simulated minute on a real graphics chip, per species, and an end that broke the flock up, packed
    it solid or froze it was pulled in to a value that did not. A lever not listed keeps the range it was declared with. */
@@ -3008,10 +3031,12 @@ function applyPins(){
 function drawVaried(){
   const B = Object.assign({}, BASE[P.species], preset.p), v = variety();
   const vr = mulberry32(seedVal ^ 0x5bd1e995 ^ (preset.behave.length * 7919));
-  for (const k in VARY) {
-    const [sd, lo, hi] = VARY[k];
+  const V = VARY[P.species], dial = preset.dial || {};
+  for (const k in V) {
+    const [sd, lo, hi] = V[k];
     const u = Math.max(1e-6, vr()), w = vr(), z = Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2831853 * w);   // always drawn, so a seed means the same at any variety
-    P[k] = k in MACRO ? Math.max(lo, Math.min(hi, 0.5 + z * sd * v)) : clampCtrl(k, B[k] * Math.max(lo, Math.min(hi, Math.exp(z * sd * v))), B[k]);
+    const mid = dial[k] != null ? dial[k] : 0.5;
+    P[k] = k in MACRO ? Math.max(Math.min(lo, mid), Math.min(Math.max(hi, mid), mid + (2 * w - 1) * sd * v)) : clampCtrl(k, B[k] * Math.max(lo, Math.min(hi, Math.exp(z * sd * v))), B[k]);
   }
   applyMacros();
   P.variety = v;
@@ -3021,7 +3046,7 @@ function drawLevers(){ drawVaried(); seedP = Object.assign({}, P); applyPins(); 
 function relever(unpinned){
   for (const k of unpinned || []) if (k in seedP) P[k] = seedP[k];
   drawVaried();
-  for (const k in VARY) seedP[k] = P[k];
+  for (const k in VARY[P.species]) seedP[k] = P[k];
   for (const g in MACRO) for (const k of MACRO[g]) seedP[k] = P[k];
   seedP.variety = P.variety;
   applyPins(); syncUI(); syncURLSoon();
@@ -3046,20 +3071,21 @@ function applyScene(sc, live){
   live = !!live && !!S && !!was && was.species === sc.species;
   preset = sc; lastScene[sc.species] = sc;
   if (!live) rng = mulberry32(seedVal ^ (sc.id.length * 2654435761) ^ sc.id.charCodeAt(0) * 40503);
-  P = Object.assign({}, BASE[sc.species], sc.p, {tight: 0.5, energy: 0.5, tour: tourOn != null ? tourOn : true, notes: oldP.notes === true, power});
+  P = Object.assign({}, BASE[sc.species], sc.p, {tight: sc.dial && sc.dial.tight != null ? sc.dial.tight : 0.5, energy: sc.dial && sc.dial.energy != null ? sc.dial.energy : 0.5, tour: tourOn != null ? tourOn : true, notes: oldP.notes === true, power});
   if (cursor) P.cursor = cursor;
   if (view) P.view = view;
   if (live && was.place === sc.place) { for (const k of SKY_KEYS) if (oldP[k] != null && !(k in sc.own)) P[k] = oldP[k]; }      // same place: the sky stays as it is
   else { todDir = 1; newSky(); }
   drawLevers();
   if (!live) {
-    cam.yaw = cam.syaw = 0.15; cam.pitch = cam.spitch = sc.pitch != null ? sc.pitch : sc.species === 'bird' ? -0.4 : -0.1;
+    // the seed chooses where you stand: off to either side of the light, a little higher or lower
+    cam.yaw = cam.syaw = 0.15 + (rng() - 0.5) * 2.4; cam.pitch = cam.spitch = (sc.pitch != null ? sc.pitch : sc.species === 'bird' ? -0.4 : -0.1) + (rng() - 0.5) * (sc.species === 'bird' ? 0.3 : 0.16);
     cam.u = cam.su = sc.u != null ? sc.u : sc.species === 'bird' ? 0 : 0.17; cam.zoom = cam.szoom = 1; follow.hunter = null;
     if (P.varyCount !== false) { const want = drawCount(); if (!S || S.N !== want) { count = want; allocSim(count); } }
     if (!S) allocSim(count);
     effective(0);
     seedFlock();
-    pred.p = V3.add(stats.c, sc.species === 'bird' ? [400, 200, -400] : [0, -5, -120]); pred.v = [0, 0, 1]; pred.stoop = 0; wild = []; attackUntil = 0; nextVisit = simTime + 15 + rng() * 10;
+    pred.p = V3.add(stats.c, sc.species === 'bird' ? [400, 200, -400] : [0, -5, -120]); pred.v = [0, 0, 1]; pred.stoop = 0; wild = []; attackUntil = 0; nextVisit = simTime + (sc.species === 'bird' ? 40 + rng() * 40 : 15 + rng() * 10);
     notes.reset();
   }
   syncURL();
@@ -3699,6 +3725,7 @@ function tick(now){
     if (warm <= 0) { canvas.classList.remove('warming'); clearTimeout(warmT); }
   } else if (!paused) {
     cloudT += dt * (0.5 + P.wind * 1.2);
+    if (P.sunMoves && P.species === 'fish') lightT += dt;
     if (P.sunMoves && P.species === 'bird') {
       // the sun slowly sets, and after dark it slowly comes back up
       P.tod += dt * todDir / 380;
@@ -3727,6 +3754,7 @@ function frameStep(dt){
   const E = effective(dt); updatePred(dt); knnPass(); simTime += dt; simPass(dt, E);
   cloudT += dt * (0.5 + P.wind * 1.2);
   if (P.sunMoves && P.species === 'bird') P.tod = Math.min(0.97, P.tod + dt / 380);
+  if (P.sunMoves && P.species === 'fish') lightT += dt;
   if (frame % 2 === 0) syncSample();
   if (pointer.active) pointerRay();
   updateCamera(dt); opacityPass(); render();
