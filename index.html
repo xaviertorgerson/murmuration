@@ -2543,12 +2543,12 @@ function densPass(){
    birds have rested, the next begins at one bird (out at the edge, or out in front if the flock is leaving home), and
    every bird starts it when a wave from that point, at turn.c metres a second, reaches it. The rate of turn is fixed for
    the whole turn, so every bird turns through the same angle. Nothing here is drawn; the shader does the flying. */
-const turn = {code: -1, t0: -1e4, o: [0, 0, 0], c: 27, rate: 0.3, free: 0, next: 0};
+const turn = {code: -1, t0: -1e4, o: [0, 0, 0], c: 27, gain: 1, rate: 0.3, free: 0, next: 0};
 function conductTurns(dt){
   if (P.species !== 'bird' || !stats.valid || !stats.pts || stats.pts.length < 32 || simTime < turn.free) return;
   const pts = stats.pts, vels = stats.vels, n = pts.length, xp = P.xp || XP0;
   // big flocks wheel slowly, small ones dart
-  turn.rate = Math.max(0.12, Math.min(1.3, 0.6 * 30 / (2.6 * Math.max(stats.spread, 4))));
+  turn.rate = Math.max(0.12, Math.min(1.3, turn.gain * 0.6 * 30 / (2.6 * Math.max(stats.spread, 4))));
   let o = -1, ang = 0, mag = 0;
   { // leaving home: the birds out in front turn back, and the flock comes round behind them
     const vf = cam.pos && cam.target ? [cam.target[0] - cam.pos[0], cam.target[2] - cam.pos[2]] : [0, 1], vl = Math.hypot(vf[0], vf[1]) || 1;
@@ -3785,7 +3785,7 @@ function dump(){
   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
   return out;
 }
-window.__murmur = {get spacing(){ return SP[P.species].spacing * spaceK(); }, get R0(){ const sp = SP[P.species]; return Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5)); }, get stats(){ return stats; }, get P(){ return P; }, applyPreset, setCount, advance, dump, onView, applyMacros, frameStep, hunters, reseed, releaseHunter(kind, k){ for (let i = 0; i < (k || 1); i++) { const h = makeHunter(kind, V3.add(stats.main, [60 + i * 8, P.species === 'bird' ? 40 : 2, 30]), false); h.state = 'hunt'; h.vis = 1; if (P.species === 'fish') h.p = V3.add(stats.main, [14 + i * 3, 1, 8]); else if (kind === 'peregrine') { const R = Math.max(stats.mainR || stats.spread, 6); h.p = V3.add(stats.main, [R * 1.7, R * 0.9 + 30, 0]); h.ang = 0; } wild.push(h); } }, startleFlock(){ click.p = V3.add(stats.main, [stats.mainR * 0.3, 0, 0]); click.t = simTime; if (P.cursor === 'hunt') startStoop(click.p); }, startleAt(x, y){ pointer.x = x; pointer.y = y; pointerRay(); click.p = pointer.world.slice(); click.t = simTime; if (P.cursor === 'hunt') startStoop(pointer.world); }, get pred(){ return pred; }, get fps(){ return fps; }, get cam(){ return cam; }, get follow(){ return follow; }, get auto(){ return AUTO; }, get gpu(){ return gpuName; }, trimFlock, perfText,
+window.__murmur = {turn, get spacing(){ return SP[P.species].spacing * spaceK(); }, get R0(){ const sp = SP[P.species]; return Math.cbrt(S.N * Math.pow(sp.spacing * spaceK(), 3) / (4.19 * 0.5)); }, get stats(){ return stats; }, get P(){ return P; }, applyPreset, setCount, advance, dump, onView, applyMacros, frameStep, hunters, reseed, releaseHunter(kind, k){ for (let i = 0; i < (k || 1); i++) { const h = makeHunter(kind, V3.add(stats.main, [60 + i * 8, P.species === 'bird' ? 40 : 2, 30]), false); h.state = 'hunt'; h.vis = 1; if (P.species === 'fish') h.p = V3.add(stats.main, [14 + i * 3, 1, 8]); else if (kind === 'peregrine') { const R = Math.max(stats.mainR || stats.spread, 6); h.p = V3.add(stats.main, [R * 1.7, R * 0.9 + 30, 0]); h.ang = 0; } wild.push(h); } }, startleFlock(){ click.p = V3.add(stats.main, [stats.mainR * 0.3, 0, 0]); click.t = simTime; if (P.cursor === 'hunt') startStoop(click.p); }, startleAt(x, y){ pointer.x = x; pointer.y = y; pointerRay(); click.p = pointer.world.slice(); click.t = simTime; if (P.cursor === 'hunt') startStoop(pointer.world); }, get pred(){ return pred; }, get fps(){ return fps; }, get cam(){ return cam; }, get follow(){ return follow; }, get auto(){ return AUTO; }, get gpu(){ return gpuName; }, trimFlock, perfText,
   get scene(){ return preset; }, get pins(){ return pins; }, get saver(){ return {on: saverOn, cycle: saverCycle}; }, get seed(){ return seedVal; }, get held(){ return toolHeld(); },
   stateQuery, parseState, applyState, pickScene, sceneFor, setSaver, relever, setVariety(v){ varietyUser[preset.species] = v; relever(); }};
 })();

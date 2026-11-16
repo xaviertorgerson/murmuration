@@ -17,6 +17,9 @@ Nothing below was tuned by eye alone. `tools/flock-metrics.js` reads the simulat
   never wait on `setTimeout` inside a measurement; use `runSync`.
 - **Runs are chaotic.** The same seed gives a different run if anything upstream changes. Judge by several
   seeds and sizes, not one.
+- **Measure what the page does by default.** For a long time every number here was taken with the wild
+  hunters switched off, and the page was fine by those numbers while the flock a visitor saw was in pieces
+  half the time. Switch something off only to isolate a cause, and say so next to the number.
 - **Looking.** `__fm.strip(n, gap, cols)` draws a contact sheet over the page; a screenshot of that shows a
   minute of flight in one picture. The ground view is the photographer's view.
 - **Against film.** `tools/silhouette-metrics.js` takes the silhouette statistics that were taken from
@@ -62,6 +65,30 @@ Nothing below was tuned by eye alone. `tools/flock-metrics.js` reads the simulat
     shows neither. Fix: far birds are drawn darker and a little larger while the pulse passes; near birds
     show the roll itself. The bunching that was added earlier to darken the band is still there but is no
     longer what makes it visible; it tore the sheet when it was strong, so do not raise it.
+
+13. **A turn passed from neighbour to neighbour tears the flock.** Birds the turn reached by a roundabout
+    path, or by the fallback, began it a few tenths of a second after the birds beside them. Two birds that
+    make the same turn a time t apart end it v·t·2·sin(angle/2) apart: 0.3 s and a right angle is 4.5 m, wider
+    than the gap the relay can cross. So one big turn left two bodies side by side, and the next turn reached
+    one and not the other. Fix: the page conducts (`conductTurns`). One turn at a time, with an origin and a
+    start; a bird begins when a wave at 27 m/s from the origin reaches it. The start time is smooth across
+    the flock, so a turn shears the flock (which is where its shapes now come from) and cannot tear it. The
+    rate is fixed for the whole turn, so every bird turns through the same angle. The relay, the priority
+    rule, the fallback and the six-second memory (2 to 4 above) are gone.
+14. **A 100° turn every eight seconds.** Of the turns begun together the bigger won, so nearly every turn
+    that survived was a big one. The conductor draws the size: mostly small, one in four a right angle.
+15. **Coming back overshot.** A returning group sprinted at 1.4 times cruise until it was inside the flock
+    and went out the other side. And "outside" was a distance from the centre, which cannot tell the far
+    end of a long flock from a second body. Fix: the page marks the main body with up to 32 sampled birds
+    spread through it (farthest-point sampling); a bird further from every mark than the marks cover is
+    outside, and flies to the nearest mark at a closing speed of half the remaining gap per second, its
+    own speed included, while the flock slows for a large lost part.
+16. **A hunter nearly all the time.** A wild hunter stayed 35 to 80 s and the next came 25 to 65 s after
+    the last had arrived, so one was present two thirds of the time, attacking every 6 to 18 s whether or
+    not the flock had closed up. Over starlings now: first visit after 40 to 80 s, a visit of 22 to 40 s,
+    the next 70 to 150 s after it leaves, and no pass while under 85% of the birds are in one body.
+17. **A behaviour key used twice** (`ball`, for birds and for fish): the later silently replaced the
+    earlier and a scene flew with the other species' levers. Keys in `BEHAVES` are unique across species.
 
 ## Starlings: the target, from Søren Solkær's Black Sun photographs
 
