@@ -93,14 +93,54 @@ ones if you choose *Cycle scenes*. *Copy its link* gives an address that opens s
   and then cycle.
 - `&power=balanced` or `&power=high` for more birds and a higher frame rate.
 
-Apps that show a web page as a screensaver or wallpaper can point at one of those addresses, or at a
-downloaded copy of `index.html`:
+### Setting it up as your system screensaver
 
-- **macOS:** [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver)
-- **Windows:** [Lively Wallpaper](https://github.com/rocksdanister/lively) (wallpaper or screensaver)
-- **Steam:** Wallpaper Engine, as a web wallpaper
+Any app that shows a web page as a screensaver can run it. Point the app at one of two places:
 
-None of these three has been tried yet. If one fails, please open an issue.
+- **A copy on your disk (recommended).** The whole simulation is the one file `index.html`: fonts,
+  icon, shaders and code are all inside it, and it makes no network requests while it runs. A copy on
+  disk starts at once, uses no bandwidth and works offline, whatever the app does with its cache. No
+  other file in this repo is needed.
+- **The site,** <https://xlt.pw/murmuration/?screensaver>. Nothing to download and always the latest
+  version, but it needs a connection whenever the screensaver starts.
+
+To get the file, clone the repo (to update later, `git pull` and copy again):
+
+```sh
+git clone https://github.com/xaviertorgerson/murmuration.git
+```
+
+or download just [`index.html`](https://raw.githubusercontent.com/xaviertorgerson/murmuration/main/index.html)
+(right-click, *Save link as*).
+
+Keep the copy outside folders the system guards: on macOS not in Desktop, Documents or Downloads,
+which a screensaver may not be allowed to read. Then add `?screensaver`, and any of the options above,
+to the file's address.
+
+**macOS:** [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver). Install it from its
+releases page, then:
+
+```sh
+mkdir -p ~/ScreenSavers/murmuration
+cp murmuration/index.html ~/ScreenSavers/murmuration/
+echo "file://$HOME/ScreenSavers/murmuration/index.html?screensaver"
+```
+
+In System Settings › Screen Saver, choose WebViewScreenSaver and click *Options…*. Add the address
+the last line printed, set its time to `-1` so it stays on this page, and remove any other addresses.
+
+**Windows:** [Lively Wallpaper](https://github.com/rocksdanister/lively). Drag `index.html` (or the
+site's address) into Lively, then turn on its screensaver in Lively's settings. Lively copies the file
+into its own library, so the copy you made can be moved afterwards.
+
+**Linux:** [webscreensaver](https://github.com/lmartinking/webscreensaver), a WebKit screen hack for
+XScreenSaver or XFCE's screensaver, set with `-url file:///home/you/screensavers/murmuration/index.html?screensaver`.
+It does not work under GNOME or Wayland.
+
+**Steam:** Wallpaper Engine can show it as a web wallpaper.
+
+None of these has been confirmed yet. If the screensaver shows the title and menu, the app dropped
+`?screensaver` from the address; if anything fails, please [open an issue](https://github.com/xaviertorgerson/murmuration/issues).
 
 ## How it works
 
